@@ -1,18 +1,35 @@
 ALMA — Blocked Matrix Multiply (C++)
 
-Fast blocked matrix multiplication example with simple low-rank block detection and OpenBLAS/BLAS acceleration.
+Fast blocked matrix multiplication with low-rank block detection and OpenBLAS/BLAS acceleration.
 
-Features
+![Build](https://img.shields.io/badge/build-passing-green)
+![Tests](https://img.shields.io/badge/tests-9%2F9-green)
+
+## Features
+
 - Blocked multiply with per-block classification (dense vs low-rank)
-- Uses BLAS (OpenBLAS) for high-performance kernels and OpenMP for threading
-- Small test and simple benchmark harness included
+- BLAS (OpenBLAS) for high-performance kernels
+- OpenMP for parallel execution
+- Small test suite and benchmark harness
 
-Files
-- `src/alma.cpp`, `src/alma.h` — core implementation
-- `src/main.cpp` — example program that prints the result as JSON
-- `tests/test_alma.cpp` — small correctness test
-- `bench/benchmark.cpp`, `bench/quick_bench.cpp` — benchmark drivers
-- `Makefile` — convenient build and run targets
+## Architecture
+
+![Architecture Flowchart](docs/diagrams/architecture.mmd#flowchart)
+![Class Diagram](docs/diagrams/architecture.mmd#class)
+![Sequence Diagram](docs/diagrams/architecture.mmd#sequence)
+
+See [docs/architecture.md](docs/architecture.md) for detailed system design.
+
+## Files
+
+| Path | Description |
+|------|-------------|
+| `src/alma.cpp`, `src/alma.h` | Core implementation |
+| `src/main.cpp` | Example program (JSON output) |
+| `tests/test_alma.cpp` | Correctness tests |
+| `bench/benchmark.cpp` | Performance benchmark |
+| `bench/quick_bench.cpp` | Quick benchmark |
+| `Makefile` | Build targets |
 
 Build
 Requires a C++17 compiler and a BLAS library (OpenBLAS recommended). On macOS with Homebrew:
