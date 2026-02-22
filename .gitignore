@@ -1,0 +1,58 @@
+# Build artifacts
+/dist/
+/build/
+/bin/
+/out/
+*.o
+*.obj
+*.lo
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+*.d
+
+# Make/test/bench binaries created by Makefile
+/tests/test_alma
+/bench/benchmark
+/bench/quick_bench
+
+# Compiler coverage/prof files
+*.gcda
+*.gcno
+*.gcov
+
+# CMake
+/CMakeFiles/
+/CMakeCache.txt
+cmake_install.cmake
+Makefile.cmake
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*~
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Logs and temp
+*.log
+*.tmp
+
+# Node/npm
+node_modules/
+
+# Coverage
+.coverage
+coverage/
+
+# Tags and misc
+tags
+tags~
