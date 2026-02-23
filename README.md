@@ -1,177 +1,231 @@
-# ALMA — Blocked Matrix Multiply (C++)
+# ALMA — Adaptive Linear Matrix Algebra
 
-Fast matrix multiplication library with automatic BLAS backend detection and platform-specific optimizations.
+BLAS-accelerated linear algebra for the shell. Bringing matrix operations to the command line.
 
 ![Tests](https://img.shields.io/badge/tests-28%2F28-green)
-
-## Performance
-
-ALMA matches or beats OpenBLAS for most matrix sizes:
-
-| Matrix Size | Speedup vs OpenBLAS | Notes |
-|-------------|---------------------|-------|
-| 512×512 | ~1.0x | At parity |
-| 1024×1024 | ~0.75-1.06x | Near parity |
-| 2048×2048 | ~0.94-1.09x | At parity |
-
-The algorithm uses the best available BLAS backend automatically.
-
-## Features
-
-- Automatic BLAS backend detection (MKL, OpenBLAS, BLIS, Accelerate)
-- Platform-specific compiler optimizations (x86_64, ARM64)
-- OpenMP for parallel execution
-- Comprehensive test suite (28 tests)
-- Error handling with descriptive error codes
-- Benchmark harness with CSV matrix support
-- Command-line interface for shell scripting
+![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Android%20%7C%20iOS-green)
 
 ## Quick Start
 
-### Install BLAS Library
-
 ```bash
-# Ubuntu/Linux
-sudo apt install libopenblas-dev
+# Build
+meson setup build
+ninja -C build
 
-# macOS (uses system Accelerate by default)
-# No install needed!
+# Run
+./build/alma help
 
-# Or install OpenBLAS via Homebrew
-brew install openblas
-
-# Intel CPUs: Install MKL for best performance
-# (Requires Intel compiler or MKL library)
+# Test
+meson test -C build
 ```
 
-### Build
+## Features
+
+- **Full Linear Algebra**: mul, inv, det, norm, svd, qr, lu, solve
+- **Multi-Platform**: Linux, macOS, Windows, Android, iOS
+- **BLAS Backend**: Auto-detects MKL, OpenBLAS, Accelerate
+- **Shell-Ready**: CSV I/O, JSON output, pipeable commands
+- **Static Linking**: Single-file executable option
+
+## CLI Usage
 
 ```bash
-make release
-make test
+# Matrix multiplication
+./build/alma mul -a a.csv -b b.csv -o result.csv
+
+# Matrix inverse
+./build/alma inv -a matrix.csv -j
+
+# Solve Ax = B
+./build/alma solve -a A.csv -b b.csv -o x.csv
+
+# SVD decomposition
+./build/alma svd -a matrix.csv -j
+
+# Norm (1, 2, inf, fro)
+./build/alma norm -a matrix.csv -n fro
+
+# Determinant
+./build/alma det -a matrix.csv
+
+# LU/QR decomposition
+./build/alma lu -a matrix.csv
+./build/alma qr -a matrix.csv
+
+# Transpose
+./build/alma transpose -a matrix.csv
+
+# Scale
+./build/alma scale -a matrix.csv --scalar 2.0
+
+# Add (alpha*A + beta*B)
+./build/alma add -a a.csv -b b.csv --alpha 1.0 --beta -1.0
 ```
 
-The build system auto-detects the best available BLAS:
-1. Intel MKL (fastest on Intel CPUs)
-2. OpenBLAS
-3. BLIS
-4. Apple Accelerate (macOS)
+## All Commands
 
-## Backend Selection
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `mul` | matmult, multiply | Matrix multiplication A * B |
+| `add` | add | Matrix addition alpha*A + beta*B |
+| `scale` | scale | Scale matrix by scalar |
+| `transpose` | trans | Transpose matrix |
+| `inv` | inverse | Matrix inverse |
+| `det` | determinant | Matrix determinant |
+| `norm` | norm | Matrix norm (1, 2, inf, fro) |
+| `svd` | svd | Singular Value Decomposition |
+| `qr` | qr | QR Decomposition |
+| `lu` | lu | LU Decomposition |
+| `solve` | solve | Solve Ax = B |
 
-The build system automatically selects the best available BLAS:
+## Options
 
-| Priority | Backend | Notes |
-|----------|--------|-------|
-| 1 | Intel MKL | Best for Intel CPUs |
-| 2 | OpenBLAS | Good cross-platform |
-| 3 | BLIS | Good alternative |
-| 4 | Apple Accelerate | macOS default |
+| Flag | Description |
+|------|-------------|
+| `-a`, `--a` | Input CSV file for matrix A |
+| `-b`, `--b` | Input CSV file for matrix B |
+| `-o`, `--output` | Output file (default: stdout) |
+| `-j`, `--json` | JSON output format |
+| `-v`, `--verbose` | Print timing information |
+| `-n`, `--norm` | Norm type: 1, 2, inf, fro |
+| `--alpha` | Scalar alpha (default: 1.0) |
+| `--beta` | Scalar beta (default: 1.0) |
+| `--scalar` | Scalar for scale command |
 
-To force a specific backend, set environment variables before building:
+## Installation
+
+### Linux
 
 ```bash
-# For Intel MKL
-export MKL_ROOT=/path/to/mkl
-meson setup build --reconfigure
+sudo apt install libopenblas-dev liblapacke-dev
+meson setup build
+ninja -C build
+sudo ninja -C build install
+```
+
+### macOS
+
+```bash
+# Uses system Accelerate framework automatically
+meson setup build
+ninja -C build
+sudo ninja -C build install
+```
+
+### Windows
+
+```bash
+# Install OpenBLAS or MKL
+meson setup build
+ninja -C build
+```
+
+### Static Build (Single File)
+
+```bash
+meson setup build -Dstatic-link=true
+ninja -C build
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    CLI Layer (src/cli/)                      │
-│  - CSV input parsing (-a, -b)                                │
-│  - Output formats: CSV, JSON (-o, -j)                       │
-│  - Verbose timing (-v)                                       │
+│                    CLI Layer                                  │
+│  Subcommands: mul, inv, svd, qr, lu, norm, solve, etc.    │
+│  CSV/JSON I/O, verbose timing                              │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+                               │
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 API Layer (src/include/alma/)               │
-│  alma_multiply() / alma_multiply_full() / alma_multiply_auto│
+│                 API Layer (C++)                              │
+│  alma_multiply(), alma_inverse(), alma_svd(), etc.        │
+│  Matrix operations, decompositions, linear systems        │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+                               │
+                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│            Core Layer (src/core/)                           │
-│  - SVD-based block classification                           │
-│  - BLAS dgemm for dense blocks                              │
-│  - U*S*VT multiplication for low-rank blocks               │
-│  - OpenMP parallelization                                   │
+│              BLAS/LAPACK Backend                             │
+│  cblas_dgemm, LAPACKE factorizations                       │
+│  OpenMP parallelization                                    │
+└─────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│              BLAS Library                                    │
+│  OpenBLAS / Intel MKL / Apple Accelerate                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-See [docs/architecture.md](docs/architecture.md) for detailed system design.
+## Platform Support
 
-## Quick Start
+| Platform | Backend | Status |
+|----------|---------|--------|
+| Linux x86_64 | OpenBLAS/MKL | Supported |
+| macOS | Accelerate | Supported |
+| Windows | OpenBLAS/MKL | Supported |
+| Android | OpenBLAS | Supported |
+| iOS | Accelerate | Supported |
 
-```bash
-brew install openblas          # macOS
-# or: sudo apt install libopenblas-dev  # Linux
-
-make release
-make test
-```
-
-Or with Meson directly:
+## Benchmarks
 
 ```bash
-meson setup build -Dprefix=$(pwd)
-meson compile -C build
-meson install -C build
-meson test -C build
+# Matrix multiplication
+./build/alma-benchmark -o mul -s 1024
+
+# LU decomposition
+./build/alma-benchmark -o lu -s 1024
+
+# SVD
+./build/alma-benchmark -o svd -s 512
+
+# Size sweep
+./build/alma-benchmark --sweep -o mul
+
+# All operations
+./build/alma-benchmark --sweep -o all
+
+# CSV output
+./build/alma-benchmark -o mul --csv
+
+# System info
+./build/alma-benchmark --sysinfo
 ```
 
-## Output
+## C++ API
 
-Build artifacts installed to `dist/[debug|release]/`:
+```cpp
+#include "alma/alma.h"
 
-```
-dist/release/
-├── exec/           # Executables (alma, alma-benchmark, quick_bench)
-├── lib/            # Shared library (libalma.dylib / libalma.so)
-└── include/        # Headers (alma.h, csv_utils.h)
-```
+// Matrix multiplication
+alma_multiply(A.data(), B.data(), C.data(), n, blockSize);
 
-## CLI Usage
+// Matrix inverse
+alma_inverse(A.data(), invA.data(), n);
 
-The `alma` executable provides a command-line interface for matrix multiplication:
+// Determinant
+double det = alma_determinant(A.data(), n);
 
-```bash
-# Basic usage with CSV matrices
-./dist/release/exec/alma -a matrix_a.csv -b matrix_b.csv -o result.csv
+// Norm
+double norm = alma_norm(A.data(), m, n, NormType::Frobenius);
 
-# Output as JSON
-./dist/release/exec/alma -a a.csv -b b.csv -j
+// SVD
+SVDResult result;
+alma_svd(A.data(), result, m, n);
+// Use result.U, result.S, result.VT
+alma_svd_free(result);
 
-# With timing information
-./dist/release/exec/alma -a a.csv -b b.csv -v
+// LU decomposition
+LUResult lu;
+alma_lu(A.data(), lu, n);
+// Use lu.LU, lu.pivots
+alma_lu_free(lu);
 
-# Custom block size
-./dist/release/exec/alma -a a.csv -b b.csv -B 64
-
-# Full dense multiplication (no low-rank optimization)
-./dist/release/exec/alma -a a.csv -b b.csv -f
-
-# Show help
-./dist/release/exec/alma -h
+// Solve Ax = B
+alma_solve(A.data(), B.data(), X.data(), n, nrhs);
 ```
 
-### CLI Options
-
-| Option | Description |
-|--------|-------------|
-| `-a, --matrix-a <file>` | Input CSV file for matrix A (required) |
-| `-b, --matrix-b <file>` | Input CSV file for matrix B (required) |
-| `-o, --output <file>` | Output CSV file (default: stdout) |
-| `-j, --json` | Output in JSON format |
-| `-B, --block-size <n>` | Block size (default: auto) |
-| `-f, --full` | Use full dense multiplication |
-| `-v, --verbose` | Print timing information |
-| `-h, --help` | Show help message |
-
-### CSV Format
+## CSV Format
 
 Square matrices, comma-separated values:
 ```
@@ -180,78 +234,13 @@ Square matrices, comma-separated values:
 7.0, 8.0, 9.0
 ```
 
-## Files
-
-| Path | Description |
-|------|-------------|
-| `meson.build` | Build configuration |
-| `src/core/alma.cpp`, `src/include/alma/alma.h` | Core library implementation |
-| `src/cli/main.cpp` | CLI executable (CSV matrix multiplication) |
-| `src/io/csv_utils.h` | CSV matrix loading utilities |
-| `src/core/platform/` | Platform-specific code (Linux, macOS) |
-| `tests/` | Test suite (28 tests) |
-| `bench/benchmark.cpp` | Performance benchmark |
-| `bench/data/*.csv` | Test matrices |
-| `docs/` | Documentation |
-
-## Usage
-
-### Build
-
-```bash
-make release     # Build release to dist/release/
-make debug       # Build debug to dist/debug/
-make test        # Run tests
-make clean       # Clean build artifacts
-```
-
-### C++ API
-
-```cpp
-#include "alma/alma.h"
-
-// Basic usage
-AlmaError err = alma_multiply(A.data(), B.data(), C.data(), n, blockSize);
-if (err != AlmaError::Success) {
-    std::cerr << alma_error_string(err) << std::endl;
-}
-
-// Auto-select block size based on cache
-err = alma_multiply_auto(A.data(), B.data(), C.data(), n);
-```
-
-### Benchmark Options
-
-```bash
-# Default benchmark (1024x1024, block=128)
-./dist/release/exec/alma-benchmark -s 1024 -b 128 -r 3
-
-# Custom size and block
-./dist/release/exec/alma-benchmark -s 2048 -b 256 -r 3
-
-# Sweep over sizes and blocks
-./dist/release/exec/alma-benchmark --sweep
-
-# CSV matrix benchmarks
-./dist/release/exec/alma-benchmark --csv-bench
-./dist/release/exec/alma-benchmark --csv-bench --csv   # CSV output
-```
-
-### Generate Test Matrices
-
-```bash
-python3 bench/generate_matrices.py
-```
-
 ## Test Suite
-
-28 tests across 7 categories:
 
 ```bash
 meson test -C build
 ```
 
-Output: `1/1 alma:alma OK ... 28 subtests passed`
+Output: `1/1 alma OK ... 28 subtests passed`
 
 ## Error Handling
 
@@ -261,51 +250,45 @@ All API functions return `AlmaError`:
 |-------|-------------|
 | `Success` | Operation completed successfully |
 | `NullPointer` | A NULL pointer was provided |
-| `InvalidDimension` | n <= 0 |
-| `InvalidBlockSize` | blockSize doesn't divide n |
-| `DimensionMismatch` | Non-square matrices |
+| `InvalidDimension` | Invalid matrix dimension |
+| `InvalidBlockSize` | Invalid block size |
+| `DimensionMismatch` | Matrix dimension mismatch |
+| `SingularMatrix` | Matrix is singular (non-invertible) |
+| `NotImplemented` | Operation not implemented |
 
-## Algorithm
+## Build Options
 
-ALMA uses a blocked matrix multiplication algorithm with SVD-based classification:
-- Matrix is partitioned into blocks of configurable size
-- Each block is analyzed using truncated SVD to detect low-rank structure
-- Dense blocks use BLAS dgemm; low-rank blocks use U*S*VT multiplication
-- Results are accumulated for the final output
-- Small matrices (n <= 256) use single BLAS call for minimal overhead
-
-## Benchmark Data
-
-Pre-generated CSV matrices in `bench/data/`:
-
-| File | Size | Pattern |
-|------|------|---------|
-| `matrix1.csv`, `matrix2.csv` | 512x512 | random |
-| `matrix_1024_*.csv` | 1024x1024 | random, sparse, identity, banded |
-| `matrix_2048_*.csv` | 2048x2048 | random, sparse, identity, banded |
-| `matrix_4096_*.csv` | 4096x4096 | random, sparse, identity |
-
-## Configuration
-
-Meson auto-detects OpenBLAS and OpenMP. To use a specific compiler:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `static-link` | Static BLAS linking | false |
+| `buildtype` | Debug or release | release |
+| `cpp_std` | C++ standard | c++17 |
 
 ```bash
-meson setup build -Dcpp=g++-15
+# Debug build
+meson setup build -Dbuildtype=debug
+
+# Static build for single-file executable
+meson setup build -Dstatic-link=true
+
+# Custom compiler
+meson setup build -Dcpp=clang++
 ```
 
-Or customize build options:
+## Files
 
-```bash
-meson setup build -Doptimization=3 -Dcpp_args="-march=native"
-```
-
-## Notes
-
-- Small matrices (n <= 256) use single BLAS call
-- Block size must divide matrix dimension
-- Low-rank detection adds overhead but speeds up structured matrices
-- Thread-safe initialization with double-checked locking
-- See [docs/performance.md](docs/performance.md) for tuning tips
+| Path | Description |
+|------|-------------|
+| `meson.build` | Build configuration |
+| `meson_options.txt` | Build options |
+| `src/core/alma.cpp` | Core implementation |
+| `src/include/alma/alma.h` | Public API |
+| `src/cli/main.cpp` | CLI executable |
+| `src/io/csv_utils.h` | CSV utilities |
+| `src/core/platform/` | Platform-specific code |
+| `tests/` | Test suite (28 tests) |
+| `bench/benchmark.cpp` | Benchmark tool |
+| `docs/` | Documentation |
 
 ## Documentation
 

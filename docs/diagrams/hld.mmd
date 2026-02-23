@@ -1,40 +1,54 @@
 flowchart TD
     subgraph CLI["CLI Layer (main.cpp)"]
-        C1[CSV Input: -a, -b] --> C2[load_csv]
+        C0[alma <command>] --> C1[Parse: -a, -b, -o, -j]
+        C1 --> C2[load_csv]
         C2 --> C3[Parse matrices]
-        C3 --> C4[Call alma_multiply]
-        C4 --> C5{Output format}
-        C5 -->|CSV| C6[save_csv / stdout]
+        C3 --> C4{Switch command}
+        C4 -->|mul| M1[cblas_dgemm]
+        C4 -->|inv| M2[alma_inverse]
+        C4 -->|det| M3[alma_determinant]
+        C4 -->|norm| M4[alma_norm]
+        C4 -->|svd| M5[alma_svd]
+        C4 -->|qr| M6[alma_qr]
+        C4 -->|lu| M7[alma_lu]
+        C4 -->|solve| M8[alma_solve]
+        C4 -->|transpose| M9[alma_transpose]
+        C4 -->|add| M10[alma_add]
+        C4 -->|scale| M11[alma_scale]
+        M1 --> C5{Output format}
+        M2 --> C5
+        M3 --> C5
+        M4 --> C5
+        M5 --> C5
+        M6 --> C5
+        M7 --> C5
+        M8 --> C5
+        M9 --> C5
+        M10 --> C5
+        M11 --> C5
+        C5 -->|CSV| C6[save_csv]
         C5 -->|JSON| C7[print_json]
+        C6 --> C8[stdout / file]
     end
-
-    subgraph API["API Layer (alma.h)"]
-        A1[alma_multiply] --> A2[Input validation]
-        A2 --> A3{blockSize == 0?}
-        A3 -->|Yes| A4[alma_get_optimal_block_size]
-        A3 -->|No| A5
-        A4 --> A5[Block partition]
-    end
-
-    subgraph Classification["Classification Layer"]
-        A5 --> B1[For each block: SVD]
-        B1 --> B2{sv[i] > 10% max?}
-        B2 -->|Yes| B3[LowRank]
-        B2 -->|No| B4[Dense]
-    end
-
-    subgraph Execution["Execution Layer"]
-        B3 --> E1[U*S*VT multiply]
-        B4 --> E2[BLAS dgemm]
-        E1 --> E3[Accumulate C]
-        E2 --> E3
-    end
-
-    C4 --> A1
-    A5 --> B1
-    E3 --> C6
     
-    style A1 fill:#f9f,stroke:#333
-    style B1 fill:#ff9,stroke:#333,stroke-width:2px
-    style E2 fill:#90EE90,stroke:#333,stroke-width:2px
-    style C6 fill:#90EE90,stroke:#333
+    subgraph BLAS["BLAS/LAPACK"]
+        B1[cblas_dgemm]
+        B2[LAPACKE_dgetrf]
+        B3[LAPACKE_dgeqrf]
+        B4[LAPACKE_dgesvd]
+        B5[LAPACKE_dgetri]
+    end
+    
+    M1 --> BLAS
+    M2 --> B5
+    M2 --> B2
+    M3 --> B2
+    M5 --> B4
+    M6 --> B3
+    M7 --> B2
+    M8 --> B2
+    M8 --> B5
+    
+    style CLI fill:#f9f,stroke:#333
+    style BLAS fill:#9ff,stroke:#333
+    style C4 fill:#ff9,stroke:#333

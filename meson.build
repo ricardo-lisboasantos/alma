@@ -169,6 +169,16 @@ if system == 'linux'
   platform_sources = ['src/core/platform/alma_linux.cpp']
 elif system == 'darwin'
   platform_sources = ['src/core/platform/alma_macos.cpp']
+elif system == 'windows'
+  platform_sources = ['src/core/platform/alma_windows.cpp']
+elif system == 'android'
+  platform_sources = ['src/core/platform/alma_android.cpp']
+elif system == 'ios'
+  platform_sources = ['src/core/platform/alma_ios.cpp']
+elif cpu_family == 'aarch64' and system == 'linux'
+  platform_sources = ['src/core/platform/alma_android.cpp']
+elif cpu_family == 'arm' and system == 'linux'
+  platform_sources = ['src/core/platform/alma_android.cpp']
 endif
 
 static_lib = static_library('alma', ['src/core/alma.cpp'] + platform_sources,

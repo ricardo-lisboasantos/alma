@@ -1,20 +1,43 @@
 flowchart TD
-    A[Start: alma_multiply] --> B[Validate inputs]
-    B --> C{n <= 256?}
-    C -->|Yes| D[Single BLAS dgemm]
-    C -->|No| E[Block partition matrix]
-    E --> F{For each block pair}
-    F --> G[Classify block: SVD]
-    G --> H{Dense or LowRank?}
-    H -->|Dense| I[BLAS dgemm]
-    H -->|LowRank| J[U*S*VT multiply]
-    I --> K[Accumulate result]
-    J --> K
-    F -->|done| L[End]
-    D --> L
+    subgraph CLI["CLI Layer"]
+        C1[mul]
+        C2[inv]
+        C3[svd]
+        C4[qr]
+        C5[lu]
+        C6[norm]
+        C7[solve]
+    end
     
-    style A fill:#f9f,stroke:#333
-    style G fill:#ff9,stroke:#333,stroke-width:2px
-    style I fill:#90EE90,stroke:#333,stroke-width:2px
-    style J fill:#90EE90,stroke:#333,stroke-width:2px
-    style L fill:#90EE90,stroke:#333
+    subgraph API["API Layer"]
+        A1[alma_multiply]
+        A2[alma_inverse]
+        A3[alma_svd]
+        A4[alma_qr]
+        A5[alma_lu]
+        A6[alma_norm]
+        A7[alma_solve]
+    end
+    
+    subgraph BLAS["BLAS/LAPACK Layer"]
+        B1[cblas_dgemm]
+        B2[LAPACKE_dgetrf]
+        B3[LAPACKE_dgeqrf]
+        B4[LAPACKE_dgesvd]
+        B5[LAPACKE_dgetri]
+    end
+    
+    subgraph BACKEND["Backend"]
+        BK1[OpenBLAS]
+        BK2[Intel MKL]
+        BK3[Apple Accelerate]
+    end
+    
+    CLI --> API
+    API --> BLAS
+    BLAS --> BACKEND
+    
+    style CLI fill:#f9f,stroke:#333
+    style API fill:#ff9,stroke:#333
+    style BLAS fill:#9ff,stroke:#333
+    style BACKEND fill:#9f9,stroke:#333
