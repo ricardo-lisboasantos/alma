@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <functional>
+#include <stdexcept>
 #include "../src/alma.h"
 #include "../src/csv_utils.h"
 
@@ -58,15 +59,42 @@ int main(int argc, char** argv) {
         } else if (arg == "-B" && i + 1 < argc) {
             matrix_b_path = argv[++i];
         } else if (arg == "-s" && i + 1 < argc) {
-            n = atoi(argv[++i]);
+            try {
+                n = std::stoi(argv[++i]);
+                if (n <= 0) throw std::invalid_argument("n must be positive");
+            } catch (const std::exception& e) {
+                std::cerr << "Error: invalid size value: " << argv[i] << "\n";
+                return 1;
+            }
         } else if (arg == "-r" && i + 1 < argc) {
-            repeats = atoi(argv[++i]);
+            try {
+                repeats = std::stoi(argv[++i]);
+                if (repeats <= 0) throw std::invalid_argument("repeats must be positive");
+            } catch (const std::exception& e) {
+                std::cerr << "Error: invalid repeats value: " << argv[i] << "\n";
+                return 1;
+            }
         } else if (i == 1) {
-            n = atoi(argv[i]);
+            try {
+                n = std::stoi(argv[i]);
+            } catch (const std::exception& e) {
+                std::cerr << "Error: invalid size value: " << argv[i] << "\n";
+                return 1;
+            }
         } else if (i == 2) {
-            block = atoi(argv[i]);
+            try {
+                block = std::stoi(argv[i]);
+            } catch (const std::exception& e) {
+                std::cerr << "Error: invalid block value: " << argv[i] << "\n";
+                return 1;
+            }
         } else if (i == 3) {
-            repeats = atoi(argv[i]);
+            try {
+                repeats = std::stoi(argv[i]);
+            } catch (const std::exception& e) {
+                std::cerr << "Error: invalid repeats value: " << argv[i] << "\n";
+                return 1;
+            }
         }
     }
     
@@ -74,17 +102,26 @@ int main(int argc, char** argv) {
     if (!matrix_a_path.empty() || !matrix_b_path.empty()) {
         int n_a = 0, n_b = 0;
         if (!matrix_a_path.empty()) {
-            if (!load_csv(matrix_a_path, A, n_a)) return 1;
+            if (!load_csv(matrix_a_path, A, n_a)) {
+                std::cerr << "Error: failed to load matrix from " << matrix_a_path << "\n";
+                return 1;
+            }
             n = n_a;
         }
         if (!matrix_b_path.empty()) {
-            if (!load_csv(matrix_b_path, B, n_b)) return 1;
+            if (!load_csv(matrix_b_path, B, n_b)) {
+                std::cerr << "Error: failed to load matrix from " << matrix_b_path << "\n";
+                return 1;
+            }
             if (!matrix_a_path.empty() && n_a != n_b) {
                 std::cerr << "Error: Matrix dimensions mismatch\n";
                 return 1;
             }
             n = n_b;
         }
+    } else if (n <= 0) {
+        std::cerr << "Error: matrix size must be positive\n";
+        return 1;
     }
     
     std::mt19937 gen(42);

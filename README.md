@@ -137,10 +137,16 @@ Pre-generated CSV matrices in `bench/data/`:
 
 ## Configuration
 
-The Makefile uses `g++-15` by default. Override:
+The Makefile auto-detects the best available compiler (tries g++-15, g++-14, g++-13, then g++). Override:
 
 ```bash
-make CXX=g++ CXXFLAGS="-O3 -std=c++17 -fopenmp"
+make CXX=g++-15
+```
+
+Or specify specific flags:
+
+```bash
+make CXXFLAGS="-O3 -std=c++17 -fopenmp"
 ```
 
 ## Notes
@@ -148,6 +154,7 @@ make CXX=g++ CXXFLAGS="-O3 -std=c++17 -fopenmp"
 - Small matrices (n <= 256) use single BLAS call
 - Block size must divide matrix dimension
 - Low-rank detection adds overhead but speeds up structured matrices
+- Thread-safe initialization with double-checked locking
 - See [docs/performance.md](docs/performance.md) for tuning tips
 
 ## Documentation

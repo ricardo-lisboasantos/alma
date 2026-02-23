@@ -13,6 +13,7 @@
 #include <cstring>
 #include <vector>
 #include <atomic>
+#include <mutex>
 
 static constexpr double LOWRANK_RATIO_THRESHOLD = 0.1;
 static constexpr int LOWRANK_MIN_SAVINGS = 16;
@@ -28,6 +29,7 @@ struct TunedConfig {
 
 static TunedConfig g_tuned_config = {0, false, false};
 static std::atomic<bool> g_tuning_in_progress(false);
+static std::mutex g_tuning_mutex;
 
 const char* alma_error_string(AlmaError err) {
     switch (err) {
@@ -181,7 +183,12 @@ static BlockMeta compute_block_meta(double* data, int rows, int cols, int ld, bo
                 m.VT[i] = VT[i];
             }
         } else {
-            free_block_meta(m);
+            free(m.U);
+            free(m.S);
+            free(m.VT);
+            m.U = nullptr;
+            m.S = nullptr;
+            m.VT = nullptr;
             m.type = BlockType::Dense;
             m.rank = rows;
         }
@@ -207,13 +214,10 @@ AlmaError alma_multiply_full(double* A, double* B, double* C,
     if (!A || !B || !C) {
         return AlmaError::NullPointer;
     }
-    if (n <= 0 || blockSize <= 0) {
+    if (n <= 0) {
         return AlmaError::InvalidDimension;
     }
-    if (n % blockSize != 0) {
-        return AlmaError::InvalidBlockSize;
-    }
-    if (blockSize > n) {
+    if (blockSize <= 0 || n % blockSize != 0 || blockSize > n) {
         return AlmaError::InvalidBlockSize;
     }
 
@@ -350,20 +354,10 @@ AlmaError alma_multiply_auto(double* A, double* B, double* C, int n) {
     }
     
     if (!g_tuned_config.initialized) {
-        if (g_tuning_in_progress.exchange(true)) {
-            int blockSize = get_cache_optimal_block_size();
-            if (n % blockSize != 0) {
-                blockSize = 128;
-                if (n % blockSize != 0) {
-                    blockSize = n;
-                }
-            }
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                        n, n, n, 1.0, A, n, B, n, 0.0, C, n);
-            return AlmaError::Success;
+        std::lock_guard<std::mutex> lock(g_tuning_mutex);
+        if (!g_tuned_config.initialized) {
+            tune_configuration();
         }
-        tune_configuration();
-        g_tuning_in_progress = false;
     }
     
     if (g_tuned_config.useOpenBLAS) {
