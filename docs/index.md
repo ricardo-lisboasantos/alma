@@ -17,6 +17,8 @@ See [README.md](../README.md) for full build instructions.
 
 | Guide | Description |
 |-------|-------------|
+| [High-Level Design](high_level.md) | System architecture, components, data flow |
+| [Low-Level Design](low_level.md) | Data structures, algorithms, implementation details |
 | [Architecture](architecture.md) | System design, components, API reference |
 | [Algorithm](paper.md) | Mathematical background and complexity |
 | [Performance](performance.md) | Benchmarking, tuning, optimization |
@@ -24,7 +26,8 @@ See [README.md](../README.md) for full build instructions.
 
 ## Key Topics
 
-- [Block classification](architecture.md#blocktype)
+- [System architecture](high_level.md) - Three-layer design
+- [Block classification](low_level.md#classify_block) - SVD-based analysis
 - [API functions](architecture.md#api-reference)
 - [Algorithm complexity](paper.md#complexity-analysis)
 - [Tuning block size](performance.md#tuning-parameters)
@@ -32,10 +35,10 @@ See [README.md](../README.md) for full build instructions.
 
 ## Diagrams
 
-See [diagrams/architecture.mmd](../docs/diagrams/architecture.mmd) for source:
-- Flowchart: Algorithm control flow
-- Class diagram: Data structures
-- Sequence diagram: Execution model
+See diagram sources in `docs/diagrams/`:
+- [HLD Diagrams](diagrams/hld.mmd) - High-level system architecture
+- [LLD Diagrams](diagrams/lld.mmd) - Low-level implementation details
+- [Architecture](diagrams/architecture.mmd) - Algorithm flow, class, sequence diagrams
 
 ## Test Suite
 
