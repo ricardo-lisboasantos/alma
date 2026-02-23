@@ -1,0 +1,2 @@
+option('static-link', type: 'boolean', value: false,
+  description: 'Statically link BLAS library for single-file executable')

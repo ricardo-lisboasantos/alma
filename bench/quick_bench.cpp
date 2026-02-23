@@ -9,8 +9,8 @@
 #include <sstream>
 #include <functional>
 #include <stdexcept>
-#include "../src/alma.h"
-#include "../src/csv_utils.h"
+#include "alma/alma.h"
+#include "io/csv_utils.h"
 
 using highres_clock = std::chrono::high_resolution_clock;
 using duration_ms = std::chrono::duration<double, std::milli>;

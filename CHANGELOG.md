@@ -1,28 +1,32 @@
 ## Unreleased
 
-### Performance Improvements
+### New Features
 
-- **2-3.5x speedup** over OpenBLAS for various matrix sizes:
-  - 256x256: up to 3.5x speedup
-  - 512x512: up to 2.3x speedup  
-  - 1024x1024: 1.6-1.8x speedup (170+ GFLOPS)
-  - 2048x2048: 1.2-1.4x speedup
+- **Expanded CLI with subcommands**: mul, add, scale, transpose, inv, det, norm, svd, qr, lu, solve
+- **Comprehensive linear algebra API**: Added 15+ new functions for matrix operations
+- **JSON output support**: All commands support `-j` flag for JSON output
 
-### Optimizations Applied
+### Build System Improvements
 
-1. **Compiler optimizations**: Added `-O3 -march=native -ffast-math` for aggressive optimization
-2. **Memory allocation**: Pre-allocated aligned buffers to avoid heap allocations in hot path
-3. **OpenMP scheduling**: Dynamic scheduling for dense matrices, static for mixed
-4. **Block classification**: Pre-compute block metadata once instead of per-iteration
-5. **Parallel initialization**: Zero output matrix in parallel for large matrices
+- **Static linking option**: `-Dstatic-link=true` for single-file executables
+- **Automatic BLAS backend detection**: Detects MKL, OpenBLAS, BLIS, and Apple Accelerate
+- **Platform-specific optimizations**: 
+  - x86_64: AVX, AVX2, FMA optimizations
+  - ARM64: ARMv8.2-a+dotprod optimizations
+  - macOS: Accelerate framework support
+- **Compiler optimizations**: -march=native, -ffast-math, -funroll-loops
 
-### Bug Fixes
+### Performance
 
-- Fixed memory allocation alignment for better cache performance
+- **At parity with OpenBLAS**: Worst case equals OpenBLAS performance
+- All tests pass with numerical accuracy maintained
 
-### Testing
+### Notes
 
-- All tests pass with numerical accuracy maintained (max diff < 1e-12)
+To achieve better performance:
+- **Use Intel MKL** on Intel CPUs (requires MKL installation)
+- **Use Apple Accelerate** on macOS (default)
+- Recompile with platform-specific BLAS for best results
 
 ---
 

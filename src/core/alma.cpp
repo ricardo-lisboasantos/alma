@@ -1,18 +1,17 @@
-#include "alma.h"
+#include "alma/alma.h"
+#include "alma/alma_cache.h"
 #include <cmath>
 #include <cblas.h>
 #include <lapacke.h>
 #include <omp.h>
 #include <cstdlib>
 #include <algorithm>
-#include <sys/sysctl.h>
 #include <chrono>
-#if defined(__linux__)
-#include <fstream>
-#endif
 #include <cstring>
 #include <vector>
 #include <mutex>
+#include <climits>
+#include <fstream>
 
 static constexpr double LOWRANK_RATIO_THRESHOLD = 0.1;
 static constexpr double LOWRANK_MAX_RATIO = 0.25;
@@ -33,6 +32,8 @@ const char* alma_error_string(AlmaError err) {
         case AlmaError::InvalidDimension: return "Invalid matrix dimension";
         case AlmaError::InvalidBlockSize: return "Invalid block size";
         case AlmaError::DimensionMismatch: return "Dimension mismatch (non-square matrix)";
+        case AlmaError::SingularMatrix: return "Matrix is singular (non-invertible)";
+        case AlmaError::NotImplemented: return "Operation not implemented";
     }
     return "Unknown error";
 }
@@ -265,7 +266,10 @@ AlmaError alma_multiply(double* A, double* B, double* C,
     if (!A || !B || !C) {
         return AlmaError::NullPointer;
     }
-    return alma_multiply_full(A, B, C, n, blockSize);
+    
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                n, n, n, 1.0, A, n, B, n, 0.0, C, n);
+    return AlmaError::Success;
 }
 
 static double benchmark_config(double* A, double* B, double* C, int n, int blockSize, int repeats) {
@@ -475,4 +479,271 @@ void multiply_lowrank_block(const MatrixBlock& A,
 
     free(M);
     free(temp);
+}
+
+double alma_norm(double* A, int m, int n, NormType type) {
+    if (!A) return 0.0;
+    if (m <= 0 || n <= 0) return 0.0;
+
+    switch (type) {
+        case NormType::One: {
+            double max_col_sum = 0.0;
+            for (int j = 0; j < n; ++j) {
+                double col_sum = 0.0;
+                for (int i = 0; i < m; ++i) {
+                    col_sum += std::fabs(A[i * n + j]);
+                }
+                if (col_sum > max_col_sum) max_col_sum = col_sum;
+            }
+            return max_col_sum;
+        }
+        case NormType::Inf: {
+            double max_row_sum = 0.0;
+            for (int i = 0; i < m; ++i) {
+                double row_sum = 0.0;
+                for (int j = 0; j < n; ++j) {
+                    row_sum += std::fabs(A[i * n + j]);
+                }
+                if (row_sum > max_row_sum) max_row_sum = row_sum;
+            }
+            return max_row_sum;
+        }
+        case NormType::Frobenius: {
+            double sum = 0.0;
+            for (int i = 0; i < m * n; ++i) {
+                sum += A[i] * A[i];
+            }
+            return std::sqrt(sum);
+        }
+        case NormType::Two: {
+            int min_dim = std::min(m, n);
+            std::vector<double> work(4 * min_dim);
+            std::vector<double> S(min_dim);
+            std::vector<double> copy(A, A + m * n);
+            int lda = n;
+            int ldu = m;
+            int ldvt = n;
+            int info = LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'N', 'N', m, n, copy.data(), lda,
+                                      S.data(), nullptr, ldu, nullptr, ldvt, work.data());
+            return info == 0 ? S[0] : 0.0;
+        }
+    }
+    return 0.0;
+}
+
+AlmaError alma_transpose(double* A, double* AT, int m, int n) {
+    if (!A || !AT) return AlmaError::NullPointer;
+    if (m <= 0 || n <= 0) return AlmaError::InvalidDimension;
+
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            AT[j * m + i] = A[i * n + j];
+        }
+    }
+    return AlmaError::Success;
+}
+
+AlmaError alma_add(double* A, double* B, double* C, int m, int n, double alpha, double beta) {
+    if (!A || !B || !C) return AlmaError::NullPointer;
+    if (m <= 0 || n <= 0) return AlmaError::InvalidDimension;
+
+    for (int i = 0; i < m * n; ++i) {
+        C[i] = alpha * A[i] + beta * B[i];
+    }
+    return AlmaError::Success;
+}
+
+AlmaError alma_scale(double* A, int m, int n, double scalar) {
+    if (!A) return AlmaError::NullPointer;
+    if (m <= 0 || n <= 0) return AlmaError::InvalidDimension;
+
+    for (int i = 0; i < m * n; ++i) {
+        A[i] *= scalar;
+    }
+    return AlmaError::Success;
+}
+
+AlmaError alma_inverse(double* A, double* invA, int n) {
+    if (!A || !invA) return AlmaError::NullPointer;
+    if (n <= 0) return AlmaError::InvalidDimension;
+
+    std::memcpy(invA, A, n * n * sizeof(double));
+
+    std::vector<int> ipiv(n);
+    int lda = n;
+    int info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, n, n, invA, lda, ipiv.data());
+    if (info > 0) return AlmaError::SingularMatrix;
+    if (info < 0) return AlmaError::InvalidDimension;
+
+    int lwork = n * 64;
+    std::vector<double> work(lwork);
+    info = LAPACKE_dgetri_work(LAPACK_ROW_MAJOR, n, invA, lda, ipiv.data(), work.data(), lwork);
+    if (info > 0) return AlmaError::SingularMatrix;
+
+    return AlmaError::Success;
+}
+
+double alma_determinant(double* A, int n) {
+    if (!A || n <= 0) return 0.0;
+
+    std::vector<double> copy(A, A + n * n);
+    std::vector<int> ipiv(n);
+    int lda = n;
+    int info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, n, n, copy.data(), lda, ipiv.data());
+    if (info > 0) return 0.0;
+
+    double det = 1.0;
+    for (int i = 0; i < n; ++i) {
+        det *= copy[i * n + i];
+        if (ipiv[i] != i + 1) det = -det;
+    }
+    return det;
+}
+
+AlmaError alma_svd(double* A, SVDResult& result, int m, int n) {
+    if (!A) return AlmaError::NullPointer;
+    if (m <= 0 || n <= 0) return AlmaError::InvalidDimension;
+
+    result.m = m;
+    result.n = n;
+    result.k = std::min(m, n);
+
+    result.U = (double*)malloc(m * result.k * sizeof(double));
+    result.S = (double*)malloc(result.k * sizeof(double));
+    result.VT = (double*)malloc(result.k * n * sizeof(double));
+
+    if (!result.U || !result.S || !result.VT) {
+        free(result.U);
+        free(result.S);
+        free(result.VT);
+        return AlmaError::NullPointer;
+    }
+
+    std::vector<double> copy(A, A + m * n);
+    int lda = n;
+    int ldu = result.k;
+    int ldvt = n;
+    std::vector<double> superb(result.k - 1);
+
+    int info = LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, copy.data(), lda,
+                              result.S, result.U, ldu, result.VT, ldvt, superb.data());
+
+    if (info != 0) {
+        alma_svd_free(result);
+        return AlmaError::InvalidDimension;
+    }
+
+    return AlmaError::Success;
+}
+
+void alma_svd_free(SVDResult& result) {
+    free(result.U);
+    free(result.S);
+    free(result.VT);
+    result.U = nullptr;
+    result.S = nullptr;
+    result.VT = nullptr;
+}
+
+AlmaError alma_lu(double* A, LUResult& result, int n) {
+    if (!A) return AlmaError::NullPointer;
+    if (n <= 0) return AlmaError::InvalidDimension;
+
+    result.n = n;
+    result.LU = (double*)malloc(n * n * sizeof(double));
+    result.pivots = (int*)malloc(n * sizeof(int));
+
+    if (!result.LU || !result.pivots) {
+        free(result.LU);
+        free(result.pivots);
+        return AlmaError::NullPointer;
+    }
+
+    std::memcpy(result.LU, A, n * n * sizeof(double));
+    int lda = n;
+    int info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, n, n, result.LU, lda, result.pivots);
+    return AlmaError::Success;
+}
+
+void alma_lu_free(LUResult& result) {
+    free(result.LU);
+    free(result.pivots);
+    result.LU = nullptr;
+    result.pivots = nullptr;
+}
+
+AlmaError alma_qr(double* A, QRResult& result, int m, int n) {
+    if (!A) return AlmaError::NullPointer;
+    if (m <= 0 || n <= 0) return AlmaError::InvalidDimension;
+
+    result.m = m;
+    result.n = n;
+
+    result.Q = (double*)malloc(m * m * sizeof(double));
+    result.R = (double*)malloc(m * n * sizeof(double));
+
+    if (!result.Q || !result.R) {
+        free(result.Q);
+        free(result.R);
+        return AlmaError::NullPointer;
+    }
+
+    std::vector<double> copy(A, A + m * n);
+    int lda = n;
+    int lwork = m * 64;
+    std::vector<double> work(lwork);
+    std::vector<double> tau(std::min(m, n));
+
+    int info = LAPACKE_dgeqrf_work(LAPACK_ROW_MAJOR, m, n, copy.data(), lda, tau.data(), work.data(), lwork);
+    if (info != 0) {
+        alma_qr_free(result);
+        return AlmaError::InvalidDimension;
+    }
+
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            if (i <= j) result.R[i * n + j] = copy[i * n + j];
+            else result.R[i * n + j] = 0.0;
+        }
+    }
+
+    info = LAPACKE_dorgqr_work(LAPACK_ROW_MAJOR, m, m, std::min(m, n), copy.data(), lda, tau.data(), work.data(), lwork);
+    if (info != 0) {
+        alma_qr_free(result);
+        return AlmaError::InvalidDimension;
+    }
+
+    for (int i = 0; i < m * m; ++i) result.Q[i] = copy[i < m * n ? i : 0];
+
+    return AlmaError::Success;
+}
+
+void alma_qr_free(QRResult& result) {
+    free(result.Q);
+    free(result.R);
+    result.Q = nullptr;
+    result.R = nullptr;
+}
+
+AlmaError alma_solve(double* A, double* B, double* X, int n, int nrhs) {
+    if (!A || !B || !X) return AlmaError::NullPointer;
+    if (n <= 0 || nrhs <= 0) return AlmaError::InvalidDimension;
+
+    LUResult lu;
+    AlmaError err = alma_lu(A, lu, n);
+    if (err != AlmaError::Success) return err;
+
+    err = alma_solve_lu(lu, B, X, n, nrhs);
+    alma_lu_free(lu);
+    return err;
+}
+
+AlmaError alma_solve_lu(const LUResult& lu, double* B, double* X, int n, int nrhs) {
+    if (!lu.LU || !lu.pivots || !B || !X) return AlmaError::NullPointer;
+
+    std::memcpy(X, B, n * nrhs * sizeof(double));
+    int lda = n;
+    int ldb = nrhs;
+    int info = LAPACKE_dgetrs(LAPACK_ROW_MAJOR, 'N', n, nrhs, lu.LU, lda, lu.pivots, X, ldb);
+    return info == 0 ? AlmaError::Success : AlmaError::SingularMatrix;
 }

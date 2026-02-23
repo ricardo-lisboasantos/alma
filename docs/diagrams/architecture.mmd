@@ -1,12 +1,20 @@
 flowchart TD
-    A[Start: alma_multiply] --> B{n <= 256?}
-    B -->|Yes| C[Single BLAS dgemm]
-    B -->|No| D[Allocate metadata arrays]
-    D --> E[Classify all blocks]
-    E --> F[Initialize C to zero]
-    F --> G[Parallel block multiply]
-    G --> H[For each block pair]
-    H --> I[dgemm accumulation]
-    I --> J[Free metadata]
-    J --> K[End]
-    C --> K
+    A[Start: alma_multiply] --> B[Validate inputs]
+    B --> C{n <= 256?}
+    C -->|Yes| D[Single BLAS dgemm]
+    C -->|No| E[Block partition matrix]
+    E --> F{For each block pair}
+    F --> G[Classify block: SVD]
+    G --> H{Dense or LowRank?}
+    H -->|Dense| I[BLAS dgemm]
+    H -->|LowRank| J[U*S*VT multiply]
+    I --> K[Accumulate result]
+    J --> K
+    F -->|done| L[End]
+    D --> L
+    
+    style A fill:#f9f,stroke:#333
+    style G fill:#ff9,stroke:#333,stroke-width:2px
+    style I fill:#90EE90,stroke:#333,stroke-width:2px
+    style J fill:#90EE90,stroke:#333,stroke-width:2px
+    style L fill:#90EE90,stroke:#333

@@ -17,6 +17,7 @@
 # Meson build artifacts
 meson-logs/
 meson-private/
+meson-info/
 
 # Compiler coverage/prof files
 *.gcda
@@ -32,6 +33,7 @@ Makefile.cmake
 # IDEs and editors
 .vscode/
 .idea/
+.zed/
 *.sublime-workspace
 *.sublime-project
 *.ruff*

@@ -1,23 +1,40 @@
 flowchart TD
-    subgraph API["API Layer"]
-        A1[alma_multiply] --> A2[alma_multiply_full]
-        A2 --> A3[alma_multiply_auto]
+    subgraph CLI["CLI Layer (main.cpp)"]
+        C1[CSV Input: -a, -b] --> C2[load_csv]
+        C2 --> C3[Parse matrices]
+        C3 --> C4[Call alma_multiply]
+        C4 --> C5{Output format}
+        C5 -->|CSV| C6[save_csv / stdout]
+        C5 -->|JSON| C7[print_json]
     end
 
-    subgraph Classify["Classification Layer"]
-        C1[classify_block] --> C2[SVD Computation<br/>dgesvd]
-        C2 --> C3[Rank Determination<br/>Threshold 0.1]
-        C3 --> C4[Cost-Benefit<br/>Savings Check]
-        C4 --> C5{LowRank?}
-        C5 -->|Yes| C6[Store U, S, VT]
-        C5 -->|No| C7[Mark Dense]
+    subgraph API["API Layer (alma.h)"]
+        A1[alma_multiply] --> A2[Input validation]
+        A2 --> A3{blockSize == 0?}
+        A3 -->|Yes| A4[alma_get_optimal_block_size]
+        A3 -->|No| A5
+        A4 --> A5[Block partition]
     end
 
-    subgraph Execute["Execution Layer"]
-        E1[Dispatch] --> E2{LowRank × LowRank?}
-        E2 -->|Yes| E3[multiply_lowrank_block]
-        E2 -->|No| E4[multiply_dense_block<br/>BLAS dgemm]
+    subgraph Classification["Classification Layer"]
+        A5 --> B1[For each block: SVD]
+        B1 --> B2{sv[i] > 10% max?}
+        B2 -->|Yes| B3[LowRank]
+        B2 -->|No| B4[Dense]
     end
 
-    A1 --> Classify
-    Classify --> Execute
+    subgraph Execution["Execution Layer"]
+        B3 --> E1[U*S*VT multiply]
+        B4 --> E2[BLAS dgemm]
+        E1 --> E3[Accumulate C]
+        E2 --> E3
+    end
+
+    C4 --> A1
+    A5 --> B1
+    E3 --> C6
+    
+    style A1 fill:#f9f,stroke:#333
+    style B1 fill:#ff9,stroke:#333,stroke-width:2px
+    style E2 fill:#90EE90,stroke:#333,stroke-width:2px
+    style C6 fill:#90EE90,stroke:#333

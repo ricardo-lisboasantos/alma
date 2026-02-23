@@ -137,19 +137,21 @@ void test_name() {
 ```
 alma/
 ├── src/
-│   ├── alma.h       # Public API
-│   ├── alma.cpp      # Implementation
-│   └── main.cpp      # Example
-├── tests/
-│   └── test_alma.cpp # Test suite
-├── bench/
-│   ├── benchmark.cpp  # Full benchmark
-│   └── quick_bench.cpp # Quick benchmark
-├── docs/
-│   ├── architecture.md
-│   ├── paper.md
-│   ├── performance.md
-│   └── contributing.md
+│   ├── include/alma/    # Public headers
+│   │   ├── alma.h
+│   │   └── alma_cache.h
+│   ├── core/           # Core implementation
+│   │   ├── alma.cpp
+│   │   └── platform/  # Platform-specific code
+│   │       ├── alma_linux.cpp
+│   │       └── alma_macos.cpp
+│   ├── io/             # I/O utilities
+│   │   └── csv_utils.h
+│   └── cli/            # CLI
+│       └── main.cpp
+├── tests/              # Test suite
+├── bench/              # Benchmarks
+├── docs/               # Documentation
 ├── meson.build
 └── README.md
 ```

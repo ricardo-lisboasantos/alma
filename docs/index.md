@@ -1,20 +1,72 @@
 # ALMA Documentation
 
-Fast blocked matrix multiplication with low-rank detection.
+Bringing BLAS-accelerated linear algebra to the shell.
 
 ## Quick Start
 
 ```bash
-brew install openblas          # macOS
-# or: sudo apt install libopenblas-dev  # Linux
-
+# Build
 meson setup build
-meson compile -C build
-meson test -C build
-./build/alma-benchmark -s 1024 -b 128 -r 3
+ninja -C build
+
+# Run
+./build/alma help
 ```
 
-See [README.md](../README.md) for full build instructions.
+## CLI Usage
+
+```bash
+# Matrix multiplication
+./build/alma mul -a a.csv -b b.csv -o result.csv
+
+# Matrix inverse
+./build/alma inv -a matrix.csv -j
+
+# Solve Ax = B
+./build/alma solve -a A.csv -b b.csv -o x.csv
+
+# SVD decomposition
+./build/alma svd -a matrix.csv -j
+
+# Norm calculation (1, 2, inf, fro)
+./build/alma norm -a matrix.csv -n fro
+
+# Determinant
+./build/alma det -a matrix.csv
+
+# LU/QR decomposition
+./build/alma lu -a matrix.csv
+./build/alma qr -a matrix.csv
+```
+
+## All Commands
+
+| Command | Description |
+|---------|-------------|
+| `mul`, `matmul` | Matrix multiplication A * B |
+| `add` | Matrix addition alpha*A + beta*B |
+| `scale` | Scale matrix by scalar |
+| `transpose` | Transpose matrix |
+| `inv`, `inverse` | Matrix inverse |
+| `det`, `determinant` | Matrix determinant |
+| `norm` | Matrix norm (1, 2, inf, fro) |
+| `svd` | Singular Value Decomposition |
+| `qr` | QR Decomposition |
+| `lu` | LU Decomposition |
+| `solve` | Solve Ax = B |
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `-a`, `--a` | Input CSV file for matrix A |
+| `-b`, `--b` | Input CSV file for matrix B |
+| `-o`, `--output` | Output file (default: stdout) |
+| `-j`, `--json` | JSON output format |
+| `-v`, `--verbose` | Print timing information |
+| `-n`, `--norm` | Norm type: 1, 2, inf, fro |
+| `--alpha` | Scalar alpha (default: 1.0) |
+| `--beta` | Scalar beta (default: 1.0) |
 
 ## Documentation
 
@@ -27,25 +79,25 @@ See [README.md](../README.md) for full build instructions.
 | [Performance](performance.md) | Benchmarking, tuning, optimization |
 | [Contributing](contributing.md) | Development setup, code style |
 
-## Key Topics
+## Building
 
-- [System architecture](high_level.md) - Three-layer design
-- [Block classification](low_level.md#classify_block) - SVD-based analysis
-- [API functions](architecture.md#api-reference)
-- [Algorithm complexity](paper.md#complexity-analysis)
-- [Tuning block size](performance.md#tuning-parameters)
-- [CSV benchmarks](performance.md#csv-benchmark-matrices)
+### Standard Build
 
-## Diagrams
+```bash
+meson setup build
+ninja -C build
+```
 
-See diagram sources in `docs/diagrams/`:
-- [HLD Diagrams](diagrams/hld.mmd) - High-level system architecture
-- [LLD Diagrams](diagrams/lld.mmd) - Low-level implementation details
-- [Architecture](diagrams/architecture.mmd) - Algorithm flow, class, sequence diagrams
+### Static Build (Single-File Executable)
 
-## Test Suite
+```bash
+meson setup build -Dstatic-link=true
+ninja -C build
+```
 
-28 tests across 7 categories:
+Note: Requires static OpenBLAS libraries installed on the system.
+
+### Test Suite
 
 ```bash
 meson test -C build
@@ -54,7 +106,30 @@ meson test -C build
 ## Benchmarks
 
 ```bash
-./build/alma-benchmark -s 1024 -b 128 -r 3   # Default benchmark
-./build/alma-benchmark --csv-bench           # CSV matrix benchmarks
-./build/alma-benchmark --sweep               # Size/block sweep
+# Default: matrix multiplication
+./build/alma-benchmark -s 1024
+
+# Different operations
+./build/alma-benchmark -o lu -s 1024   # LU decomposition
+./build/alma-benchmark -o qr -s 1024    # QR decomposition
+./build/alma-benchmark -o svd -s 512    # SVD
+./build/alma-benchmark -o inv -s 1024   # Matrix inverse
+
+# Size sweep
+./build/alma-benchmark --sweep -o mul   # Sweep multiplication
+./build/alma-benchmark --sweep -o all    # Sweep all operations
+
+# CSV output
+./build/alma-benchmark -o mul --csv
+
+# System info
+./build/alma-benchmark --sysinfo
 ```
+
+## Backend Detection
+
+ALMA automatically detects and uses the best available BLAS backend:
+
+- **Intel MKL** (highest performance on x86)
+- **OpenBLAS** (default on Linux)
+- **Apple Accelerate** (macOS)

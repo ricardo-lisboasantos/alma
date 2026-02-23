@@ -4,8 +4,8 @@
 #include <string>
 #include <cmath>
 #include <iostream>
-#include "../src/alma.h"
-#include "../src/csv_utils.h"
+#include "alma/alma.h"
+#include "io/csv_utils.h"
 
 void ref_mul(const double* A, const double* B, double* C, int n);
 

@@ -82,23 +82,23 @@ def generate_matrix(n, filename, pattern="random", scale=1.0):
     print(f"Generated {filepath}: {n}x{n} {pattern}")
 
 
+def generate_matrices(size: int):
+    generate_matrix(size, "matrix_{}_random.csv".format(size), "random")
+    generate_matrix(size, "matrix_{}_sparse.csv".format(size), "sparse")
+    generate_matrix(size, "matrix_{}_identity.csv".format(size), "identity")
+    generate_matrix(size, "matrix_{}_banded.csv".format(size), "banded")
+
+
 if __name__ == "__main__":
     # Generate various test matrices
     generate_matrix(512, "matrix1.csv", "random")
     generate_matrix(512, "matrix2.csv", "random")
 
-    generate_matrix(1024, "matrix_1024_random.csv", "random")
-    generate_matrix(1024, "matrix_1024_sparse.csv", "sparse")
-    generate_matrix(1024, "matrix_1024_identity.csv", "identity")
-    generate_matrix(1024, "matrix_1024_banded.csv", "banded")
-
-    generate_matrix(2048, "matrix_2048_random.csv", "random")
-    generate_matrix(2048, "matrix_2048_sparse.csv", "sparse")
-    generate_matrix(2048, "matrix_2048_identity.csv", "identity")
-    generate_matrix(2048, "matrix_2048_banded.csv", "banded")
-
-    generate_matrix(4096, "matrix_4096_random.csv", "random")
-    generate_matrix(4096, "matrix_4096_sparse.csv", "sparse")
-    generate_matrix(4096, "matrix_4096_identity.csv", "identity")
+    generate_matrices(512)
+    generate_matrices(1024)
+    generate_matrices(2048)
+    generate_matrices(4096)
+    generate_matrices(8192)
+    generate_matrices(8192 * 2)
 
     print("Done!")
