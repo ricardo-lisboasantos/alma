@@ -13,4 +13,4 @@ cpu = 'arm64'
 endian = 'little'
 
 [properties]
-sdk_path = 'iphoneos'
+sdk_path = 'iphonesimulator'

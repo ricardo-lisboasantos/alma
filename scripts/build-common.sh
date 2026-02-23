@@ -645,3 +645,68 @@ install_ios() {
     
     echo "iOS installation successful"
 }
+
+run_ios_simulator() {
+    local build_dir="build/ios"
+    local binary="$build_dir/alma-benchmark"
+    
+    if [ ! -d "$build_dir" ]; then
+        echo "Build directory not found. Building iOS first..."
+        setup_ios_build release
+        compile_ios release
+    fi
+    
+    if [ ! -f "$binary" ]; then
+        echo "Binary not found at $binary"
+        return 1
+    fi
+    
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        echo "iOS simulator can only be run on macOS"
+        return 1
+    fi
+    
+    local xcrun_path=$(which xcrun 2>/dev/null || echo "")
+    if [ -z "$xcrun_path" ]; then
+        echo "xcrun not found. Please install Xcode."
+        return 1
+    fi
+    
+    local simctl_path=$(xcrun -find simctl 2>/dev/null || echo "")
+    if [ -z "$simctl_path" ]; then
+        echo "simctl not found. Please install Xcode with iOS Simulator."
+        return 1
+    fi
+    
+    local devices_output=$(xcrun simctl list devices available 2>/dev/null)
+    local first_device=$(echo "$devices_output" | grep -A1 "^-- iOS " | grep "iPhone" | head -1)
+    
+    if [ -z "$first_device" ]; then
+        echo "No iOS simulators found. Please install an iOS simulator in Xcode."
+        return 1
+    fi
+    
+    local first_udid
+    first_udid=$(echo "$first_device" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}')
+    
+    if [ -z "$first_udid" ]; then
+        echo "Could not parse device UDID from: $first_device"
+        return 1
+    fi
+    
+    local device_name
+    device_name=$(echo "$first_device" | sed 's/([^)]*)//g; s/  */ /g' | xargs | sed 's/[0-9a-f-]*$//' | sed 's/ $//')
+    
+    echo "Using iOS Simulator: $device_name ($first_udid)"
+    
+    local state
+    state=$(echo "$first_device" | grep -oE '\(.*\)' | tr -d '()')
+    
+    if [ "$state" != "Booted" ]; then
+        echo "Booting simulator..."
+        xcrun simctl boot "$first_udid" 2>/dev/null || true
+    fi
+    
+    echo "Running alma-benchmark in iOS Simulator..."
+    xcrun simctl spawn "$first_udid" "$binary" "$@"
+}

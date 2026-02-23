@@ -1,4 +1,4 @@
-.PHONY: all debug release test clean install deps check help setup android build-blis-android build-lapack-android
+.PHONY: all debug release test clean install deps check help setup android build-blis-android build-lapack-android run-ios
 
 SCRIPT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 COMMON_SCRIPT := $(SCRIPT_DIR)/scripts/build-common.sh
@@ -91,6 +91,9 @@ ios:
 	@bash -c 'source $(COMMON_SCRIPT); compile_ios release'
 	@bash -c 'source $(COMMON_SCRIPT); install_ios release'
 
+run-ios: ios
+	@bash -c 'source $(COMMON_SCRIPT); run_ios_simulator $(ARGS)'
+
 help:
 	@echo "Alma build system - Cross-platform Makefile"
 	@echo ""
@@ -110,6 +113,8 @@ help:
 	@echo "  build-lapack-android - Build LAPACK for Android arm64"
 	@echo "  android              - Build for Android arm64 (requires NDK)"
 	@echo "  ios                  - Build for iOS (requires Xcode)"
+	@echo "  run-ios              - Build and run in iOS Simulator (requires Xcode)"
+	@echo "                        Pass args: make run-ios ARGS='--help'"
 	@echo "  windows              - Build for Windows (requires MinGW)"
 	@echo ""
 	@echo "Setup targets (install toolchains):"
