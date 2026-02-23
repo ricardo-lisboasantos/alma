@@ -28,3 +28,7 @@ void alma_multiply_block(const MatrixBlock& A,
 
 void alma_multiply(double* A, double* B, double* C,
                    int n, int blockSize);
+void alma_multiply_full(double* A, double* B, double* C,
+                        int n, int blockSize, bool use_svd);
+void alma_multiply_auto(double* A, double* B, double* C, int n);
+int alma_get_optimal_block_size();
