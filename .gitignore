@@ -18,6 +18,7 @@
 meson-logs/
 meson-private/
 meson-info/
+vendor
 
 # Compiler coverage/prof files
 *.gcda

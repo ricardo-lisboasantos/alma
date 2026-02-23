@@ -8,15 +8,19 @@ enable_static = static_link or get_option('default_library') == 'static'
 
 openmp = dependency('openmp')
 
-lapacke = dependency('lapacke', required: false)
 c_compiler = meson.get_compiler('c')
 system = host_machine.system()
 is_darwin_based = system == 'darwin'
 is_macos = is_darwin_based and run_command('sw_vers', '-productVersion', check: false).returncode() == 0
 is_ios = is_darwin_based and not is_macos
 
-if not lapacke.found() and not is_darwin_based and system != 'windows' and system != 'android'
-  lapacke = c_compiler.find_library('lapacke', required: true)
+if system == 'android'
+  lapacke = []
+else
+  lapacke = dependency('lapacke', required: false)
+  if not lapacke.found() and not is_darwin_based and system != 'windows'
+    lapacke = c_compiler.find_library('lapacke', required: true)
+  endif
 endif
 
 blas_lib = ''
@@ -27,21 +31,45 @@ use_mkl = false
 use_accelerate = false
 backend_name = 'openblas'
 
-mkl = dependency('mkl', required: false)
-if mkl.found()
-  message('Using Intel MKL')
-  blas_dep = [mkl]
-  use_mkl = true
-  backend_name = 'mkl'
+if system == 'android'
+  message('Android build - checking for BLIS...')
+  
+  blis_path = meson.current_source_dir() + '/vendor/blis/android-arm64'
+  blis_pc = blis_path + '/lib/pkgconfig/blis.pc'
+  
+  if run_command('test', '-f', blis_pc, check: false).returncode() == 0
+    message('Found BLIS at: ' + blis_path)
+    
+    c_compiler = meson.get_compiler('c')
+    blis_lib = c_compiler.find_library('blis', required: false, dirs: [blis_path + '/lib'])
+    if blis_lib.found()
+      message('Using BLIS (static)')
+      blas_dep = [blas_dep, blis_lib]
+      blas_cflags = ['-I' + blis_path + '/include']
+      backend_name = 'blis'
+    endif
+  endif
+  
+  if backend_name != 'blis'
+    message('BLIS not found. Building for Android requires pre-built BLIS.')
+    message('Run: make build-blis-android')
+  endif
 else
-  mkl_core = dependency('mkl_core', required: false)
-  if mkl_core.found()
-    message('Using Intel MKL (core)')
-    blas_dep = [mkl_core]
+  mkl = dependency('mkl', required: false)
+  if mkl.found()
+    message('Using Intel MKL')
+    blas_dep = [mkl]
     use_mkl = true
     backend_name = 'mkl'
+  else
+    mkl_core = dependency('mkl_core', required: false)
+    if mkl_core.found()
+      message('Using Intel MKL (core)')
+      blas_dep = [mkl_core]
+      use_mkl = true
+      backend_name = 'mkl'
+    endif
   endif
-endif
 
 if not use_mkl
   blas = dependency('blas', required: false)
@@ -131,6 +159,7 @@ if blas_libs.length() == 0 and blas_dep.length() == 0
   endif
 endif
 endif
+endif
 
 opt_args = []
 
@@ -185,12 +214,7 @@ elif system == 'android'
   if cpu_family == 'aarch64' or cpu_family == 'arm64'
     opt_args += ['-march=armv8.2-a+dotprod']
   endif
-  androidblas = dependency('blas', required: false)
-  if androidblas.found()
-    message('Using Android BLAS')
-    blas_dep = [androidblas]
-    backend_name = 'android'
-  endif
+  message('Android - using built-in or no BLAS')
 endif
 
 if use_mkl
@@ -228,6 +252,7 @@ endif
 static_lib = static_library('alma', ['src/core/alma.cpp'] + platform_sources,
   include_directories: ['src', 'src/include'],
   dependencies: [openmp, lapacke] + blas_dep,
+  cpp_args: blas_cflags,
   link_args: blas_libs,
   install: false
 )
@@ -235,6 +260,7 @@ static_lib = static_library('alma', ['src/core/alma.cpp'] + platform_sources,
 libalma_dylib = shared_library('alma', ['src/core/alma.cpp'] + platform_sources,
   include_directories: ['src', 'src/include'],
   dependencies: [openmp, lapacke] + blas_dep,
+  cpp_args: blas_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/lib'
@@ -244,6 +270,7 @@ alma_exec = executable('alma', 'src/cli/main.cpp',
   include_directories: ['src', 'src/include'],
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
+  cpp_args: blas_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/exec'
@@ -253,6 +280,7 @@ benchmark_exec = executable('alma-benchmark', 'bench/benchmark.cpp',
   include_directories: ['src', 'src/include'],
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
+  cpp_args: blas_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/exec'
@@ -262,6 +290,7 @@ quickbench_exec = executable('quick_bench', 'bench/quick_bench.cpp',
   include_directories: ['src', 'src/include'],
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
+  cpp_args: blas_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/exec'
@@ -284,6 +313,7 @@ test_sources = [
 test('alma', executable('test_alma', test_sources,
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
+  cpp_args: blas_cflags,
   link_args: blas_libs,
   include_directories: ['src', 'src/include']
 ), protocol: 'tap')

@@ -1,0 +1,19 @@
+[binaries]
+c = 'x86_64-w64-mingw32-gcc'
+cpp = 'x86_64-w64-mingw32-g++'
+ar = 'x86_64-w64-mingw32-ar'
+strip = 'x86_64-w64-mingw32-strip'
+ranlib = 'x86_64-w64-mingw32-ranlib'
+pkgconfig = 'pkg-config'
+
+[host_machine]
+system = 'windows'
+cpu_family = 'x86_64'
+cpu = 'x86-64'
+endian = 'little'
+
+[properties]
+sys_root = '/usr/x86_64-w64-mingw32'
+
+[options]
+winlib_args = ['-DWIN32_LEAN_AND_MEAN', '-DNOMINMAX']

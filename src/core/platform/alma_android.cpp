@@ -22,10 +22,14 @@ int alma_get_num_numa_nodes() {
 }
 
 int alma_set_thread_affinity(int cpu_id) {
+#if defined(__NR_sched_setaffinity)
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_id, &cpuset);
-    return pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+    return sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
+#else
+    return 0;
+#endif
 }
 
 int alma_set_thread_affinity_by_numa(int numa_node, int num_threads) {

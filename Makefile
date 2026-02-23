@@ -1,4 +1,4 @@
-.PHONY: all debug release test clean install deps check help setup
+.PHONY: all debug release test clean install deps check help setup android build-blis-android
 
 SCRIPT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 COMMON_SCRIPT := $(SCRIPT_DIR)/scripts/build-common.sh
@@ -63,6 +63,28 @@ setup-ios:
 setup-windows:
 	@bash $(SETUP_SCRIPT) windows
 
+build-blis-android:
+	@bash -c 'source $(COMMON_SCRIPT); check_android_deps' || (echo "Please set up Android NDK first" && exit 1)
+	@bash -c 'source $(COMMON_SCRIPT); build_blis_for_android'
+
+android:
+	@bash -c 'source $(COMMON_SCRIPT); check_android_deps' || (echo "Please set up Android NDK first" && exit 1)
+	@bash -c 'source $(COMMON_SCRIPT); setup_android_build release'
+	@bash -c 'source $(COMMON_SCRIPT); compile_android release'
+	@bash -c 'source $(COMMON_SCRIPT); install_android release'
+
+windows:
+	@bash -c 'source $(COMMON_SCRIPT); check_windows_deps' || (echo "Please set up Windows cross-compile toolchain first" && exit 1)
+	@bash -c 'source $(COMMON_SCRIPT); setup_windows_build release'
+	@bash -c 'source $(COMMON_SCRIPT); compile_windows release'
+	@bash -c 'source $(COMMON_SCRIPT); install_windows release'
+
+ios:
+	@bash -c 'source $(COMMON_SCRIPT); check_ios_deps' || (echo "Please set up iOS toolchain first" && exit 1)
+	@bash -c 'source $(COMMON_SCRIPT); setup_ios_build release'
+	@bash -c 'source $(COMMON_SCRIPT); compile_ios release'
+	@bash -c 'source $(COMMON_SCRIPT); install_ios release'
+
 help:
 	@echo "Alma build system - Cross-platform Makefile"
 	@echo ""
@@ -76,6 +98,12 @@ help:
 	@echo "  deps     - Install system dependencies"
 	@echo "  check    - Check for missing dependencies"
 	@echo "  help     - Show this help message"
+	@echo ""
+	@echo "Cross-compile targets:"
+	@echo "  build-blis-android - Build BLIS for Android arm64"
+	@echo "  android            - Build for Android (requires NDK)"
+	@echo "  ios                - Build for iOS (requires Xcode)"
+	@echo "  windows            - Build for Windows (requires MinGW)"
 	@echo ""
 	@echo "Setup targets (install toolchains):"
 	@echo "  make setup-linux   - Set up Linux build dependencies"
