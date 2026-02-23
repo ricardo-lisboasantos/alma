@@ -12,6 +12,9 @@
 #include <mutex>
 #include <climits>
 #include <fstream>
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
 
 static constexpr double LOWRANK_RATIO_THRESHOLD = 0.1;
 static constexpr double LOWRANK_MAX_RATIO = 0.25;

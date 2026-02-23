@@ -1,4 +1,4 @@
-project('alma', 'cpp',
+project('alma', 'cpp', 'c',
   version: '0.2.0',
   default_options: ['cpp_std=c++17', 'optimization=3', 'buildtype=release']
 )
@@ -9,8 +9,14 @@ enable_static = static_link or get_option('default_library') == 'static'
 openmp = dependency('openmp')
 
 lapacke = dependency('lapacke', required: false)
-if not lapacke.found()
-  lapacke = cc.find_library('lapacke', required: true)
+c_compiler = meson.get_compiler('c')
+system = host_machine.system()
+is_darwin_based = system == 'darwin'
+is_macos = is_darwin_based and run_command('sw_vers', '-productVersion', check: false).returncode() == 0
+is_ios = is_darwin_based and not is_macos
+
+if not lapacke.found() and not is_darwin_based and system != 'windows' and system != 'android'
+  lapacke = c_compiler.find_library('lapacke', required: true)
 endif
 
 blas_lib = ''
@@ -132,13 +138,28 @@ cpu_family = host_machine.cpu_family()
 system = host_machine.system()
 
 if system == 'darwin'
-  message('macOS detected, checking for Accelerate...')
-  accelerate = dependency('accelerate', required: false)
-  if accelerate.found()
-    message('Using Apple Accelerate framework')
-    blas_dep = [accelerate]
-    use_accelerate = true
-    backend_name = 'accelerate'
+  if is_ios
+    message('iOS detected, using Accelerate framework')
+    accelerate = dependency('accelerate', required: false)
+    if accelerate.found()
+      message('Using Apple Accelerate framework')
+      blas_dep = [accelerate]
+      use_accelerate = true
+      backend_name = 'accelerate'
+    endif
+  else
+    message('macOS detected, checking for Accelerate...')
+    accelerate = dependency('accelerate', required: false)
+    openblas_incdir = '/opt/homebrew/opt/openblas/include'
+    if run_command('test', '-d', openblas_incdir, check: false).returncode() == 0
+      opt_args += ['-I' + openblas_incdir]
+    endif
+    if accelerate.found()
+      message('Using Apple Accelerate framework')
+      blas_dep = [accelerate]
+      use_accelerate = true
+      backend_name = 'accelerate'
+    endif
   endif
   opt_args += ['-march=native', '-O3']
 elif system == 'linux'
@@ -148,6 +169,27 @@ elif system == 'linux'
     opt_args += ['-mfma', '-mavx', '-mavx2']
   elif cpu_family == 'aarch64' or cpu_family == 'arm64'
     opt_args += ['-march=armv8.2-a+dotprod']
+  endif
+elif system == 'windows'
+  message('Windows detected')
+  opt_args += ['-march=native']
+  windowsblas = dependency('blas', required: false)
+  if windowsblas.found()
+    message('Using Windows BLAS')
+    blas_dep = [windowsblas]
+    backend_name = 'windows'
+  endif
+elif system == 'android'
+  message('Android detected')
+  opt_args += ['-march=native', '-ffast-math']
+  if cpu_family == 'aarch64' or cpu_family == 'arm64'
+    opt_args += ['-march=armv8.2-a+dotprod']
+  endif
+  androidblas = dependency('blas', required: false)
+  if androidblas.found()
+    message('Using Android BLAS')
+    blas_dep = [androidblas]
+    backend_name = 'android'
   endif
 endif
 
@@ -167,14 +209,16 @@ dist_dir = 'dist/' + build_type
 platform_sources = []
 if system == 'linux'
   platform_sources = ['src/core/platform/alma_linux.cpp']
-elif system == 'darwin'
-  platform_sources = ['src/core/platform/alma_macos.cpp']
 elif system == 'windows'
   platform_sources = ['src/core/platform/alma_windows.cpp']
 elif system == 'android'
   platform_sources = ['src/core/platform/alma_android.cpp']
-elif system == 'ios'
-  platform_sources = ['src/core/platform/alma_ios.cpp']
+elif system == 'darwin'
+  if is_ios
+    platform_sources = ['src/core/platform/alma_ios.cpp']
+  else
+    platform_sources = ['src/core/platform/alma_macos.cpp']
+  endif
 elif cpu_family == 'aarch64' and system == 'linux'
   platform_sources = ['src/core/platform/alma_android.cpp']
 elif cpu_family == 'arm' and system == 'linux'
