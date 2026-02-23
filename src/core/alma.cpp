@@ -2,7 +2,11 @@
 #include "alma/alma_cache.h"
 #include <cmath>
 #include <cblas.h>
+#if defined(__ANDROID__)
+#include <lapacke_android.h>
+#else
 #include <lapacke.h>
+#endif
 #include <omp.h>
 #include <cstdlib>
 #include <algorithm>
