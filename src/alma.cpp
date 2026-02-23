@@ -97,7 +97,6 @@ static BlockMeta compute_block_meta(double* data, int rows, int cols, int ld, bo
     BlockMeta m;
     m.rows = rows;
     m.cols = cols;
-    m.ld = ld;
     m.U = nullptr;
     m.S = nullptr;
     m.VT = nullptr;
@@ -353,6 +352,10 @@ AlmaError alma_multiply_auto(double* A, double* B, double* C, int n) {
         return AlmaError::NullPointer;
     }
     
+    if (n <= 0) {
+        return AlmaError::InvalidDimension;
+    }
+    
     if (!g_tuned_config.initialized) {
         std::lock_guard<std::mutex> lock(g_tuning_mutex);
         if (!g_tuned_config.initialized) {
@@ -393,19 +396,43 @@ void alma_multiply_block(const MatrixBlock& A,
 void multiply_dense_block(const MatrixBlock& A,
                           const MatrixBlock& B,
                           MatrixBlock& C) {
+    if (!A.data || !B.data || !C.data) {
+        return;
+    }
+
+    int ldA = A.meta.cols;
+    int ldB = B.meta.cols;
+    int ldC = C.meta.cols;
+
     cblas_dgemm(CblasRowMajor,
                 CblasNoTrans, CblasNoTrans,
                 A.meta.rows, B.meta.cols, A.meta.cols,
                 1.0,
-                A.data, A.meta.ld,
-                B.data, B.meta.ld,
+                A.data, ldA,
+                B.data, ldB,
                 1.0,
-                C.data, C.meta.ld);
+                C.data, ldC);
+}
+
+static bool safe_multiply_size(int a, int b, size_t* out) {
+    if (a <= 0 || b <= 0) {
+        *out = 0;
+        return false;
+    }
+    if (a > INT_MAX / b) {
+        return false;
+    }
+    *out = static_cast<size_t>(a) * static_cast<size_t>(b);
+    return true;
 }
 
 void multiply_lowrank_block(const MatrixBlock& A,
                            const MatrixBlock& B,
                            MatrixBlock& C) {
+    if (!A.data || !B.data || !C.data) {
+        return;
+    }
+
     int m = A.meta.rows;
     int n = B.meta.cols;
     int k = A.meta.cols;
@@ -419,8 +446,15 @@ void multiply_lowrank_block(const MatrixBlock& A,
         return;
     }
 
-    double* M = (double*)malloc(ra * rb * sizeof(double));
-    double* temp = (double*)malloc(ra * n * sizeof(double));
+    size_t m_size, temp_size;
+    if (!safe_multiply_size(ra, rb, &m_size) || 
+        !safe_multiply_size(ra, n, &temp_size)) {
+        multiply_dense_block(A, B, C);
+        return;
+    }
+
+    double* M = (double*)malloc(m_size * sizeof(double));
+    double* temp = (double*)malloc(temp_size * sizeof(double));
     
     if (!M || !temp) {
         free(M);
@@ -442,7 +476,7 @@ void multiply_lowrank_block(const MatrixBlock& A,
                 ra, n, rb, 1.0, M, rb, B.meta.VT, n, 0.0, temp, n);
 
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                m, n, ra, 1.0, A.meta.U, ra, temp, n, 1.0, C.data, C.meta.ld);
+                m, n, ra, 1.0, A.meta.U, ra, temp, n, 1.0, C.data, C.meta.cols);
 
     free(M);
     free(temp);

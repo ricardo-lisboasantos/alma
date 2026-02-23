@@ -15,7 +15,6 @@ enum class BlockType { LowRank, Dense };
 struct BlockMeta {
     BlockType type;
     int rows, cols, rank;
-    int ld;
     double* U;
     double* S;
     double* VT;
