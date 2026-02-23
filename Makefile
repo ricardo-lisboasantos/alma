@@ -1,12 +1,13 @@
-.PHONY: all debug release test clean install deps check help
+.PHONY: all debug release test clean install deps check help setup
 
 SCRIPT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 COMMON_SCRIPT := $(SCRIPT_DIR)/scripts/build-common.sh
+SETUP_SCRIPT := $(SCRIPT_DIR)/scripts/build-setup.sh
 
 OS := $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/mac/')
 
 ifeq ($(OS),linux)
-  PKG_MGR := $(shell if command -v apt-get &> /dev/null; then echo "apt"; else echo "unknown"; fi)
+  PKG_MGR := $(shell if command -v apt-get &> /dev/null; then echo "apt"; else if command -v dnf &> /dev/null; then echo "dnf"; else echo "unknown"; fi; fi)
 else ifeq ($(OS),mac)
   PKG_MGR := $(shell if command -v brew &> /dev/null; then echo "brew"; else echo "unknown"; fi)
 else
@@ -45,6 +46,23 @@ deps:
 check:
 	@bash -c 'source $(COMMON_SCRIPT); check_deps $(OS)'
 
+setup: setup-linux setup-macos setup-android setup-ios setup-windows
+
+setup-linux:
+	@bash $(SETUP_SCRIPT) linux
+
+setup-macos:
+	@bash $(SETUP_SCRIPT) macos
+
+setup-android:
+	@bash $(SETUP_SCRIPT) android
+
+setup-ios:
+	@bash $(SETUP_SCRIPT) ios
+
+setup-windows:
+	@bash $(SETUP_SCRIPT) windows
+
 help:
 	@echo "Alma build system - Cross-platform Makefile"
 	@echo ""
@@ -58,6 +76,13 @@ help:
 	@echo "  deps     - Install system dependencies"
 	@echo "  check    - Check for missing dependencies"
 	@echo "  help     - Show this help message"
+	@echo ""
+	@echo "Setup targets (install toolchains):"
+	@echo "  make setup-linux   - Set up Linux build dependencies"
+	@echo "  make setup-macos  - Set up macOS build dependencies"
+	@echo "  make setup-android - Set up Android NDK toolchain"
+	@echo "  make setup-ios     - Set up iOS toolchain"
+	@echo "  make setup-windows - Set up Windows cross-compile toolchain"
 	@echo ""
 	@echo "Detected OS: $(OS)"
 	@echo "Package manager: $(PKG_MGR)"

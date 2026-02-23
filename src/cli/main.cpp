@@ -202,7 +202,11 @@ int cmd_add(int argc, char* argv[], bool json) {
     }
     
     std::vector<double> C(m * n);
+    auto start = std::chrono::high_resolution_clock::now();
     alma_add(A.data(), B.data(), C.data(), m, n, alpha, beta);
+    auto end = std::chrono::high_resolution_clock::now();
+    double ms = std::chrono::duration<double, std::milli>(end - start).count();
+    if (verbose) std::cout << "Time: " << ms << " ms\n";
     
     if (json) {
         std::cout << "{\n";
@@ -240,7 +244,11 @@ int cmd_scale(int argc, char* argv[], bool json) {
     int m, n;
     if (!load_matrix(a_path, A, m, n)) return 1;
     
+    auto start = std::chrono::high_resolution_clock::now();
     alma_scale(A.data(), m, n, scalar);
+    auto end = std::chrono::high_resolution_clock::now();
+    double ms = std::chrono::duration<double, std::milli>(end - start).count();
+    if (verbose) std::cout << "Time: " << ms << " ms\n";
     
     if (json) {
         std::cout << "{\n";
@@ -276,7 +284,11 @@ int cmd_transpose(int argc, char* argv[], bool json) {
     if (!load_matrix(a_path, A, m, n)) return 1;
     
     std::vector<double> AT(n * m);
+    auto start = std::chrono::high_resolution_clock::now();
     alma_transpose(A.data(), AT.data(), m, n);
+    auto end = std::chrono::high_resolution_clock::now();
+    double ms = std::chrono::duration<double, std::milli>(end - start).count();
+    if (verbose) std::cout << "Time: " << ms << " ms\n";
     
     if (json) {
         std::cout << "{\n";
@@ -401,7 +413,11 @@ int cmd_norm(int argc, char* argv[], bool json) {
     else if (norm_str == "inf" || norm_str == "i") type = NormType::Inf;
     else if (norm_str == "fro" || norm_str == "f") type = NormType::Frobenius;
     
+    auto start = std::chrono::high_resolution_clock::now();
     double norm = alma_norm(A.data(), m, n, type);
+    auto end = std::chrono::high_resolution_clock::now();
+    double ms = std::chrono::duration<double, std::milli>(end - start).count();
+    if (verbose) std::cout << "Time: " << ms << " ms\n";
     
     if (json) {
         std::cout << "{\n";

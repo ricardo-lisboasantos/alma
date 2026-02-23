@@ -664,7 +664,7 @@ AlmaError alma_lu(double* A, LUResult& result, int n) {
 
     std::memcpy(result.LU, A, n * n * sizeof(double));
     int lda = n;
-    int info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, n, n, result.LU, lda, result.pivots);
+    LAPACKE_dgetrf(LAPACK_ROW_MAJOR, n, n, result.LU, lda, result.pivots);
     return AlmaError::Success;
 }
 
