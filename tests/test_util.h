@@ -5,10 +5,9 @@
 #include <cmath>
 #include <iostream>
 #include "../src/alma.h"
+#include "../src/csv_utils.h"
 
 void ref_mul(const double* A, const double* B, double* C, int n);
-
-bool load_csv(const std::string& path, std::vector<double>& M, int& n);
 
 bool test_matrix(int n, int block, const std::vector<double>& A, const std::vector<double>& B);
 

@@ -126,6 +126,12 @@ The block size controls the granularity of the algorithm:
 
 For 8MB L3 cache: `sqrt(8MB / 16 bytes) ≈ 512`
 
+### Cache-aware defaults & API
+
+The library now detects the L3 cache at runtime and picks an optimal block size automatically. Call `alma_get_optimal_block_size()` from client code to retrieve the value used by `alma_multiply_auto()`.
+
+Detection is platform-aware: on macOS it queries `hw.l3cachesize`, on Linux it reads `/sys/devices/system/cpu/.../index3/size`, and it falls back to an 8MB default when detection fails.
+
 ### Matrix Pattern Performance
 
 - **Dense/random**: Best speedup (~1.5-2x)
@@ -150,6 +156,12 @@ Blocks with Frobenius norm < 1e-3 are classified as low-rank:
 ```cpp
 static constexpr double LOWRANK_THRESHOLD = 1e-3;
 ```
+
+### Rank Estimation (SVD heuristic)
+
+An optional lightweight SVD-based rank estimator is used during block classification to decide whether a block can be treated as low-rank. The estimator is heuristic (cheap) — it inspects norms and diagonal contributions and returns a small integer rank estimate. When enabled, blocks with estimated rank significantly smaller than the block size are classified as `LowRank` and can enable low-rank multiplication paths.
+
+The rank estimator is enabled by default in `alma_multiply_auto`/`alma_multiply` and can be toggled via the `use_svd` parameter in `alma_multiply_full`.
 
 ## Compiler Optimizations
 

@@ -1,15 +1,17 @@
 # ALMA — Blocked Matrix Multiply (C++)
 
-Fast blocked matrix multiplication with low-rank block detection and OpenBLAS/BLAS acceleration.
+Fast blocked matrix multiplication with SVD-based low-rank block detection and OpenBLAS/BLAS acceleration.
 
 ![Tests](https://img.shields.io/badge/tests-28%2F28-green)
 
 ## Features
 
-- Blocked multiply with per-block classification (dense vs low-rank)
-- BLAS (OpenBLAS) for high-performance kernels
+- SVD-based low-rank block detection for structured matrices
+- BLAS (OpenBLAS) for high-performance dense kernels
+- LAPACK integration for singular value decomposition
 - OpenMP for parallel execution
 - Comprehensive test suite (28 tests)
+- Error handling with descriptive error codes
 - Benchmark harness with CSV matrix support
 
 ## Architecture
@@ -35,6 +37,7 @@ make bench
 |------|-------------|
 | `src/alma.cpp`, `src/alma.h` | Core implementation |
 | `src/main.cpp` | Example program (JSON output) |
+| `src/csv_utils.h` | CSV matrix loading utilities |
 | `tests/` | Test suite (28 tests) |
 | `bench/benchmark.cpp` | Performance benchmark |
 | `bench/data/*.csv` | Test matrices |
@@ -48,6 +51,21 @@ make bench
 make              # Build main binary
 make test         # Run test suite
 make bench        # Run benchmark
+```
+
+### C++ API
+
+```cpp
+#include "alma.h"
+
+// Basic usage
+AlmaError err = alma_multiply(A.data(), B.data(), C.data(), n, blockSize);
+if (err != AlmaError::Success) {
+    std::cerr << alma_error_string(err) << std::endl;
+}
+
+// Auto-select block size based on cache
+err = alma_multiply_auto(A.data(), B.data(), C.data(), n);
 ```
 
 ### Benchmark Options
@@ -86,6 +104,26 @@ python3 bench/generate_matrices.py
 | Large matrices | 256x256 |
 | CSV data | 512x512 |
 
+## Error Handling
+
+All API functions return `AlmaError`:
+
+| Error | Description |
+|-------|-------------|
+| `Success` | Operation completed successfully |
+| `NullPointer` | A NULL pointer was provided |
+| `InvalidDimension` | n <= 0 |
+| `InvalidBlockSize` | blockSize doesn't divide n |
+| `DimensionMismatch` | Non-square matrices |
+
+## Low-Rank Optimization
+
+The library automatically detects low-rank blocks using truncated SVD:
+
+- Singular values > 10% of maximum are retained
+- Only used when computational savings exceed threshold
+- Ideal for matrices with structure (sparse, banded, low-rank)
+
 ## Benchmark Data
 
 Pre-generated CSV matrices in `bench/data/`:
@@ -109,6 +147,7 @@ make CXX=g++ CXXFLAGS="-O3 -std=c++17 -fopenmp"
 
 - Small matrices (n <= 256) use single BLAS call
 - Block size must divide matrix dimension
+- Low-rank detection adds overhead but speeds up structured matrices
 - See [docs/performance.md](docs/performance.md) for tuning tips
 
 ## Documentation

@@ -11,8 +11,8 @@ ALMA implements a blocked matrix multiplication algorithm with per-block classif
 The system consists of three main layers:
 
 1. **API Layer** — Public functions in `alma.h`
-2. **Classification Layer** — Block analysis and categorization
-3. **Execution Layer** — BLAS-powered multiplication with OpenMP parallelism
+2. **Classification Layer** — SVD-based block analysis and categorization
+3. **Execution Layer** — BLAS-powered and low-rank multiplication with OpenMP parallelism
 
 ## Data Structures
 
@@ -33,8 +33,11 @@ Enumeration distinguishing between dense blocks and blocks with low-rank structu
 | `type` | BlockType | Dense or LowRank classification |
 | `rows` | int | Number of rows in block |
 | `cols` | int | Number of columns in block |
-| `rank_est` | int | Estimated rank (1 for low-rank, blockSize for dense) |
+| `rank` | int | Actual rank (0 for zero blocks, < blockSize for low-rank) |
 | `ld` | int | Leading dimension (row stride in original matrix) |
+| `U` | double* | Left singular vectors (low-rank only) |
+| `S` | double* | Singular values (low-rank only) |
+| `VT` | double* | Right singular vectors transposed (low-rank only) |
 
 ### MatrixBlock
 
@@ -43,42 +46,84 @@ Enumeration distinguishing between dense blocks and blocks with low-rank structu
 | `data` | double* | Pointer to block data |
 | `meta` | BlockMeta | Block metadata |
 
+### AlmaError
+
+```cpp
+enum class AlmaError {
+    Success = 0,
+    NullPointer,
+    InvalidDimension,
+    InvalidBlockSize,
+    DimensionMismatch
+};
+```
+
+Error codes returned by API functions.
+
 ## API Reference
 
 ### alma_multiply
 
 ```cpp
-void alma_multiply(double* A, double* B, double* C,
-                   int n, int blockSize);
+AlmaError alma_multiply(double* A, double* B, double* C,
+                       int n, int blockSize);
 ```
 
 Main entry point for blocked matrix multiplication.
 
 **Parameters:**
-- `A` — Input matrix A (mxk)
-- `B` — Input matrix B (kxn)
-- `C` — Output matrix C (mxn), must be pre-allocated
-- `n` — Matrix dimension (assumes square matrices)
-- `blockSize` — Size of each block
+- `A` — Input matrix A (n×n)
+- `B` — Input matrix B (n×n)
+- `C` — Output matrix C (n×n), must be pre-allocated
+- `n` — Matrix dimension (square matrices only)
+- `blockSize` — Size of each block (must divide n)
+
+**Returns:** `AlmaError` indicating success or failure type
 
 **Behavior:**
 - For n <= 256: Falls back to single BLAS dgemm
-- For n > 256: Uses blocked algorithm with parallel execution
+- For n > 256: Uses blocked algorithm with SVD-based classification and parallel execution
+
+### alma_multiply_full
+
+```cpp
+AlmaError alma_multiply_full(double* A, double* B, double* C,
+                             int n, int blockSize);
+```
+
+Low-level blocked multiplication with full classification and low-rank optimization.
+
+### alma_multiply_auto
+
+```cpp
+AlmaError alma_multiply_auto(double* A, double* B, double* C, int n);
+```
+
+Automatically selects optimal block size based on L3 cache and performs blocked multiplication.
 
 ### classify_block
 
 ```cpp
-BlockMeta classify_block(double* data, int rows, int cols);
+BlockMeta classify_block(double* data, int rows, int cols, int ld);
 ```
 
-Classify a single block as Dense or LowRank.
+Classify a single block as Dense or LowRank using SVD.
 
 **Parameters:**
 - `data` — Pointer to block data
 - `rows` — Number of rows
 - `cols` — Number of columns
+- `ld` — Leading dimension
 
-**Returns:** BlockMeta with classification
+**Returns:** BlockMeta with classification and SVD factors (if low-rank)
+
+### free_block_meta
+
+```cpp
+void free_block_meta(BlockMeta& meta);
+```
+
+Free allocated SVD factors (U, S, VT) in a BlockMeta structure.
 
 ### multiply_dense_block
 
@@ -98,7 +143,9 @@ void multiply_lowrank_block(const MatrixBlock& A,
                             MatrixBlock& C);
 ```
 
-Multiply two low-rank blocks. Currently delegates to dense multiplication.
+Multiply two low-rank blocks using SVD-based multiplication:
+- Uses the formula: C = A * B = (U_a * S_a * VTa) * (U_b * S_b * VTb)
+- Computes M = VTa * U_b, scales by singular values, then multiplies
 
 ### alma_multiply_block
 
@@ -108,7 +155,30 @@ void alma_multiply_block(const MatrixBlock& A,
                          MatrixBlock& C);
 ```
 
-Dispatch multiplication based on block types.
+Dispatch multiplication based on block types (low-rank or dense).
+
+### alma_error_string
+
+```cpp
+const char* alma_error_string(AlmaError err);
+```
+
+Convert error code to human-readable string.
+
+## Low-Rank Detection
+
+The implementation uses truncated SVD to detect low-rank structure:
+
+1. **SVD Computation**: Uses LAPACK `dgesvd` to compute singular values and vectors
+2. **Rank Determination**: Keeps singular values > 10% of the maximum
+3. **Cost-Benefit Analysis**: Only uses low-rank form if memory/compute savings exceed threshold
+
+### Thresholds
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `LOWRANK_RATIO_THRESHOLD` | 0.1 | Minimum singular value ratio to keep |
+| `LOWRANK_MIN_SAVINGS` | 16 | Minimum compute savings required |
 
 ## Execution Model
 
@@ -119,9 +189,10 @@ Dispatch multiplication based on block types.
 | Optimization | Description | Impact |
 |--------------|-------------|--------|
 | Small matrix fallback | Single BLAS call for n <= 256 | Avoids overhead |
-| Block classification | Identifies low-rank blocks | Enables optimizations |
+| SVD-based classification | Identifies low-rank blocks using LAPACK | Enables ~O(n²) multiplication |
+| Low-rank multiplication | Uses U*S*VT factorization | Reduced complexity for structured matrices |
 | Parallel execution | OpenMP collapse(2) | Scales with cores |
-| Cache-aligned allocation | 64-byte aligned metadata | Reduces cache misses |
+| Dynamic scheduling | Fine-grained block scheduling | Load balancing |
 
 ## Memory Layout
 
@@ -132,3 +203,15 @@ A[i][j] = A[i * ld + j]
 ```
 
 The leading dimension (`ld`) allows for submatrix operations within larger matrices.
+
+## Error Handling
+
+All public API functions return `AlmaError`:
+
+- `Success` — Operation completed successfully
+- `NullPointer` — A NULL pointer was provided
+- `InvalidDimension` — n <= 0
+- `InvalidBlockSize` — blockSize <= 0 or doesn't divide n
+- `DimensionMismatch` — Non-square matrices (future)
+
+Use `alma_error_string()` to get human-readable error messages.

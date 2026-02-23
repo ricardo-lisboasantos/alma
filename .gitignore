@@ -45,6 +45,7 @@ Makefile.cmake
 # Logs and temp
 *.log
 *.tmp
+*.csv
 
 # Node/npm
 node_modules/

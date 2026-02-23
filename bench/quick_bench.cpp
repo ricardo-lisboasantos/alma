@@ -9,49 +9,15 @@
 #include <sstream>
 #include <functional>
 #include "../src/alma.h"
-
-bool load_csv(const std::string& path, std::vector<double>& M, int& n) {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        std::cerr << "Error: Cannot open " << path << "\n";
-        return false;
-    }
-    
-    std::vector<std::vector<double>> rows;
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::vector<double> row;
-        double val;
-        while (ss >> val) {
-            row.push_back(val);
-            if (ss.peek() == ',') ss.ignore();
-        }
-        if (!row.empty()) rows.push_back(std::move(row));
-    }
-    
-    if (rows.empty()) {
-        std::cerr << "Error: Empty CSV file " << path << "\n";
-        return false;
-    }
-    
-    n = rows.size();
-    M.resize(n * n);
-    for (int i = 0; i < n; ++i) {
-        if ((int)rows[i].size() != n) {
-            std::cerr << "Error: Matrix " << path << " is not square or has inconsistent rows\n";
-            return false;
-        }
-        for (int j = 0; j < n; ++j) {
-            M[i * n + j] = rows[i][j];
-        }
-    }
-    return true;
-}
+#include "../src/csv_utils.h"
 
 using highres_clock = std::chrono::high_resolution_clock;
 using duration_ms = std::chrono::duration<double, std::milli>;
+
+double gflops(int n, double time_ms) {
+    if (time_ms <= 0) return 0.0;
+    return 2.0 * n * n * n / (time_ms * 1e6);
+}
 
 // Quick benchmark for a single configuration
 double time_kernel(std::function<void()> f, int repeats, bool warmup = true) {
@@ -77,10 +43,6 @@ void openblas_mul(const double* A, const double* B, double* C, int n) {
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 n, n, n,
                 1.0, A, n, B, n, 0.0, C, n);
-}
-
-double gflops(int n, double time_ms) {
-    return 2.0 * n * n * n / (time_ms * 1e6);
 }
 
 int main(int argc, char** argv) {

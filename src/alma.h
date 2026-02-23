@@ -2,12 +2,23 @@
 
 #include <cstddef>
 
+enum class AlmaError {
+    Success = 0,
+    NullPointer,
+    InvalidDimension,
+    InvalidBlockSize,
+    DimensionMismatch
+};
+
 enum class BlockType { LowRank, Dense };
 
 struct BlockMeta {
     BlockType type;
-    int rows, cols, rank_est;
-    int ld; // leading dimension (row stride) in the original matrix
+    int rows, cols, rank;
+    int ld;
+    double* U;
+    double* S;
+    double* VT;
 };
 
 struct MatrixBlock {
@@ -15,7 +26,7 @@ struct MatrixBlock {
     BlockMeta meta;
 };
 
-BlockMeta classify_block(double* data, int rows, int cols);
+BlockMeta classify_block(double* data, int rows, int cols, int ld);
 void multiply_dense_block(const MatrixBlock& A,
                           const MatrixBlock& B,
                           MatrixBlock& C);
@@ -26,9 +37,12 @@ void alma_multiply_block(const MatrixBlock& A,
                          const MatrixBlock& B,
                          MatrixBlock& C);
 
-void alma_multiply(double* A, double* B, double* C,
-                   int n, int blockSize);
-void alma_multiply_full(double* A, double* B, double* C,
-                        int n, int blockSize, bool use_svd);
-void alma_multiply_auto(double* A, double* B, double* C, int n);
+void free_block_meta(BlockMeta& meta);
+
+AlmaError alma_multiply(double* A, double* B, double* C,
+                        int n, int blockSize);
+AlmaError alma_multiply_full(double* A, double* B, double* C,
+                             int n, int blockSize);
+AlmaError alma_multiply_auto(double* A, double* B, double* C, int n);
 int alma_get_optimal_block_size();
+const char* alma_error_string(AlmaError err);
