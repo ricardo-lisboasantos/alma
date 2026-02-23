@@ -120,6 +120,22 @@ meson setup build
 ninja -C build
 ```
 
+### iOS (macOS only)
+
+```bash
+# Build for iOS simulator
+make ios
+
+# Build and run in iOS Simulator
+make run-ios
+
+# Pass arguments to the benchmark
+make run-ios ARGS='--help'
+make run-ios ARGS='-s 2048 -r 5'
+```
+
+Requires Xcode with iOS Simulator.
+
 ### Static Build (Single File)
 
 ```bash
