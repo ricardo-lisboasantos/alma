@@ -228,6 +228,7 @@ install_headers('src/include/alma/alma.h', 'src/include/alma/alma_cache.h', 'src
 test_sources = [
   'tests/test_alma.cpp',
   'tests/test_util.cpp',
+  'tests/test_ops.cpp',
   'tests/test_basic.cpp',
   'tests/test_edge.cpp',
   'tests/test_random.cpp',
