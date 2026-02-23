@@ -14,19 +14,18 @@
 *.out
 *.d
 
-# Make/test/bench binaries created by Makefile
-/tests/test_alma
-/bench/benchmark
-/bench/quick_bench
+# Meson build artifacts
+meson-logs/
+meson-private/
 
 # Compiler coverage/prof files
 *.gcda
 *.gcno
 *.gcov
 
-# CMake
-/CMakeFiles/
-/CMakeCache.txt
+# Legacy build files
+CMakeFiles/
+CMakeCache.txt
 cmake_install.cmake
 Makefile.cmake
 
@@ -35,6 +34,8 @@ Makefile.cmake
 .idea/
 *.sublime-workspace
 *.sublime-project
+*.ruff*
+*.cache*
 *.swp
 *~
 

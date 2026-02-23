@@ -12,14 +12,10 @@
 #endif
 #include <cstring>
 #include <vector>
-#include <atomic>
 #include <mutex>
 
 static constexpr double LOWRANK_RATIO_THRESHOLD = 0.1;
-static constexpr int LOWRANK_MIN_SAVINGS = 16;
 static constexpr double LOWRANK_MAX_RATIO = 0.25;
-static constexpr int TUNING_MAX_TIME_MS = 500;
-static constexpr int TUNING_MIN_REPEATS = 2;
 
 struct TunedConfig {
     int blockSize;
@@ -28,7 +24,6 @@ struct TunedConfig {
 };
 
 static TunedConfig g_tuned_config = {0, false, false};
-static std::atomic<bool> g_tuning_in_progress(false);
 static std::mutex g_tuning_mutex;
 
 const char* alma_error_string(AlmaError err) {

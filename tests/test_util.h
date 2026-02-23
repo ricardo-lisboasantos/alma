@@ -28,22 +28,20 @@ public:
     }
     
     int run() {
-        int passed = 0;
         int failed = 0;
         
-        for (const auto& t : tests) {
-            std::cout << "Test: " << t.name << "... ";
-            if (t.func()) {
-                std::cout << "PASSED\n";
-                passed++;
+        std::cout << "1.." << tests.size() << "\n";
+        
+        for (size_t i = 0; i < tests.size(); ++i) {
+            const auto& t = tests[i];
+            bool result = t.func();
+            if (result) {
+                std::cout << "ok " << (i + 1) << " - " << t.name << "\n";
             } else {
-                std::cout << "FAILED\n";
+                std::cout << "not ok " << (i + 1) << " - " << t.name << "\n";
                 failed++;
             }
         }
-        
-        std::cout << "\n====================\n";
-        std::cout << "Results: " << passed << " passed, " << failed << " failed\n";
         
         return failed;
     }

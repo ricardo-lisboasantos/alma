@@ -5,10 +5,13 @@ Fast blocked matrix multiplication with low-rank detection.
 ## Quick Start
 
 ```bash
-brew install openblas
-make
-make test
-make bench
+brew install openblas          # macOS
+# or: sudo apt install libopenblas-dev  # Linux
+
+meson setup build
+meson compile -C build
+meson test -C build
+./build/alma-benchmark -s 1024 -b 128 -r 3
 ```
 
 See [README.md](../README.md) for full build instructions.
@@ -45,13 +48,13 @@ See diagram sources in `docs/diagrams/`:
 28 tests across 7 categories:
 
 ```bash
-make test
+meson test -C build
 ```
 
 ## Benchmarks
 
 ```bash
-make bench                    # Default benchmark
-./bench/benchmark --csv-bench # CSV matrix benchmarks
-./bench/benchmark --sweep    # Size/block sweep
+./build/alma-benchmark -s 1024 -b 128 -r 3   # Default benchmark
+./build/alma-benchmark --csv-bench           # CSV matrix benchmarks
+./build/alma-benchmark --sweep               # Size/block sweep
 ```

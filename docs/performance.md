@@ -6,20 +6,20 @@ Run benchmarks using the included tools:
 
 ```bash
 # Default benchmark (1024x1024)
-make bench
+./build/alma-benchmark -s 1024 -b 128 -r 3
 
 # Custom size and block size
-make bench n=2048 block=128
+./build/alma-benchmark -s 2048 -b 128 -r 3
 
 # Sweep over sizes and blocks
-./bench/benchmark --sweep
+./build/alma-benchmark --sweep
 
 # CSV matrix benchmarks (multiple patterns and sizes)
-./bench/benchmark --csv-bench
-./bench/benchmark --csv-bench --csv   # CSV output
+./build/alma-benchmark --csv-bench
+./build/alma-benchmark --csv-bench --csv   # CSV output
 
 # Quick benchmark
-make quick
+./build/quick_bench
 ```
 
 ## Threading & Hardware Configuration
@@ -28,16 +28,16 @@ The benchmark automatically detects your hardware and configures fair comparison
 
 ```bash
 # Show system info (physical cores, RAM, L3 cache, recommended block size)
-./bench/benchmark --sysinfo
+./build/alma-benchmark --sysinfo
 
 # Use specific number of threads (default: physical cores)
-./bench/benchmark -t 8
+./build/alma-benchmark -t 8
 
 # Disable CPU affinity binding
-./bench/benchmark --no-affinity
+./build/alma-benchmark --no-affinity
 
 # Combine options
-./bench/benchmark -t 8 -b 256 -v
+./build/alma-benchmark -t 8 -b 256 -v
 ```
 
 ### Threading Strategy
@@ -165,10 +165,11 @@ The rank estimator is enabled by default in `alma_multiply_auto`/`alma_multiply`
 
 ## Compiler Optimizations
 
-The Makefile enables aggressive optimizations:
+The Meson build enables aggressive optimizations by default:
 
-```makefile
-CXXFLAGS = -O3 -std=c++17 -fopenmp -march=native -ffast-math
+```meson
+default_options: ['cpp_std=c++17', 'optimization=3']
+add_project_arguments('-march=native', '-ffast-math', language: 'cpp')
 ```
 
 | Flag | Effect |

@@ -25,16 +25,38 @@ See [docs/architecture.md](docs/architecture.md) for detailed system design.
 ## Quick Start
 
 ```bash
-brew install openblas
-make
+brew install openblas          # macOS
+# or: sudo apt install libopenblas-dev  # Linux
+
+make release
 make test
-make bench
+```
+
+Or with Meson directly:
+
+```bash
+meson setup build -Dprefix=$(pwd)
+meson compile -C build
+meson install -C build
+meson test -C build
+```
+
+## Output
+
+Build artifacts installed to `dist/[debug|release]/`:
+
+```
+dist/release/
+├── exec/           # Executables (alma, alma-benchmark, quick_bench)
+├── lib/            # Shared library (libalma.dylib / libalma.so)
+└── include/        # Headers (alma.h, csv_utils.h)
 ```
 
 ## Files
 
 | Path | Description |
 |------|-------------|
+| `meson.build` | Build configuration |
 | `src/alma.cpp`, `src/alma.h` | Core implementation |
 | `src/main.cpp` | Example program (JSON output) |
 | `src/csv_utils.h` | CSV matrix loading utilities |
@@ -48,9 +70,10 @@ make bench
 ### Build
 
 ```bash
-make              # Build main binary
-make test         # Run test suite
-make bench        # Run benchmark
+make release     # Build release to dist/release/
+make debug       # Build debug to dist/debug/
+make test        # Run tests
+make clean       # Clean build artifacts
 ```
 
 ### C++ API
@@ -72,17 +95,17 @@ err = alma_multiply_auto(A.data(), B.data(), C.data(), n);
 
 ```bash
 # Default benchmark (1024x1024, block=128)
-make bench
+./build/alma-benchmark -s 1024 -b 128 -r 3
 
 # Custom size and block
-make bench n=2048 block=256
+./build/alma-benchmark -s 2048 -b 256 -r 3
 
 # Sweep over sizes and blocks
-./bench/benchmark --sweep
+./build/alma-benchmark --sweep
 
 # CSV matrix benchmarks
-./bench/benchmark --csv-bench
-./bench/benchmark --csv-bench --csv   # CSV output
+./build/alma-benchmark --csv-bench
+./build/alma-benchmark --csv-bench --csv   # CSV output
 ```
 
 ### Generate Test Matrices
@@ -95,14 +118,11 @@ python3 bench/generate_matrices.py
 
 28 tests across 7 categories:
 
-| Category | Tests |
-|----------|-------|
-| Basic sizes | 4x4, 8x8, 16x16, 32x32 |
-| Edge cases | 1x1, 2x2, 8x8, 128x128 |
-| Random data | 32x32, 64x64, 128x128 |
-| Special matrices | 12 (identity, zeros, diagonal, etc.) |
-| Large matrices | 256x256 |
-| CSV data | 512x512 |
+```bash
+meson test -C build
+```
+
+Output: `1/1 alma:alma OK ... 28 subtests passed`
 
 ## Error Handling
 
@@ -137,16 +157,16 @@ Pre-generated CSV matrices in `bench/data/`:
 
 ## Configuration
 
-The Makefile auto-detects the best available compiler (tries g++-15, g++-14, g++-13, then g++). Override:
+Meson auto-detects OpenBLAS and OpenMP. To use a specific compiler:
 
 ```bash
-make CXX=g++-15
+meson setup build -Dcpp=g++-15
 ```
 
-Or specify specific flags:
+Or customize build options:
 
 ```bash
-make CXXFLAGS="-O3 -std=c++17 -fopenmp"
+meson setup build -Doptimization=3 -Dcpp_args="-march=native"
 ```
 
 ## Notes

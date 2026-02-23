@@ -7,39 +7,44 @@
 - C++17 compiler (GCC 10+, Clang 12+, Apple clang 15+)
 - OpenBLAS or other BLAS library
 - OpenMP (libomp on macOS)
-- Make
+- Meson + Ninja
 
 ### macOS
 
 ```bash
-brew install openblas
-make
+brew install openblas meson ninja
+meson setup build
+meson compile -C build
 ```
 
 ### Linux (Debian/Ubuntu)
 
 ```bash
-sudo apt-get install build-essential libopenblas-dev libomp-dev
-make
+sudo apt install meson ninja-build libopenblas-dev libomp-dev
+meson setup build
+meson compile -C build
 ```
 
 ## Building
 
 ```bash
+# Configure (first time or after clean)
+meson setup build
+
+# Compile
+meson compile -C build
+
+# Rebuild after changes
+meson compile -C build
+
 # Clean build
-make clean && make
-
-# Build with custom compiler
-make CXX=g++-15
-
-# Custom flags
-make CXXFLAGS="-O3 -std=c++17 -fopenmp"
+meson setup build --wipe
 ```
 
 ## Running Tests
 
 ```bash
-make test
+meson test -C build
 ```
 
 All tests must pass before submitting changes.
@@ -48,21 +53,29 @@ All tests must pass before submitting changes.
 Test: Small matrix (4x4, block=2)... PASSED
 Test: Medium matrix (64x64, block=16)... PASSED
 ...
-====================
-Results: 9 passed, 0 failed
+==================
+Results: 1/1 alma:alma OK
 ```
 
 ## Running Benchmarks
 
 ```bash
 # Default benchmark
-make bench
+./build/alma-benchmark -s 1024 -b 128 -r 3
 
 # Custom parameters
-make bench n=2048 block=128
+./build/alma-benchmark -s 2048 -b 128 -r 3
 
 # Quick benchmark
-make quickbench
+./build/quick_bench
+```
+
+### Linux (Debian/Ubuntu)
+
+```bash
+sudo apt install meson ninja-build libopenblas-dev libomp-dev
+meson setup build
+meson compile -C build
 ```
 
 ## Code Style
@@ -137,7 +150,7 @@ alma/
 │   ├── paper.md
 │   ├── performance.md
 │   └── contributing.md
-├── Makefile
+├── meson.build
 └── README.md
 ```
 
@@ -154,5 +167,5 @@ Include:
 1. Fork the repository
 2. Create a feature branch
 3. Make changes with tests
-4. Ensure `make test` passes
+4. Ensure `meson test -C build` passes
 5. Submit PR with description
