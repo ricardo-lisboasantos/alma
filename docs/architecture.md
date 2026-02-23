@@ -4,7 +4,7 @@
 
 ALMA implements a blocked matrix multiplication algorithm with per-block classification to optimize for matrices with low-rank structure. The library provides both low-level block operations and high-level matrix multiplication entry points.
 
-![Flowchart](diagrams/architecture.mmd#flowchart)
+![Flowchart](diagrams/architecture.mmd)
 
 ## System Design
 
@@ -16,7 +16,7 @@ The system consists of three main layers:
 
 ## Data Structures
 
-![Class Diagram](diagrams/architecture.mmd#class)
+![Class Diagram](diagrams/architecture-classdiagram.mmd)
 
 ### BlockType
 
@@ -182,7 +182,7 @@ The implementation uses truncated SVD to detect low-rank structure:
 
 ## Execution Model
 
-![Sequence Diagram](diagrams/architecture.mmd#sequence)
+![Sequence Diagram](diagrams/architecture-sequence.mmd)
 
 ## Key Optimizations
 

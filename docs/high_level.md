@@ -6,26 +6,14 @@ ALMA (Adaptive Low-rank Matrix Algebra) is a C++ library implementing blocked ma
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      API Layer (alma.h)                       │
-├─────────────────────────────────────────────────────────────┤
-│  alma_multiply  │  alma_multiply_full  │  alma_multiply_auto │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Classification Layer                        │
-│            SVD-based block analysis and categorization        │
-│              BlockType::LowRank  │  BlockType::Dense        │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Execution Layer                           │
-│     BLAS dgemm (dense)  │  SVD-based multiply (low-rank)    │
-│                  OpenMP Parallelism                          │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[API Layer (alma.h)<br/>alma_multiply<br/>alma_multiply_full<br/>alma_multiply_auto]
+    B[Classification Layer<br/>SVD-based block analysis and categorization<br/>BlockType::LowRank / BlockType::Dense]
+    C[Execution Layer<br/>BLAS dgemm (dense)<br/>SVD-based multiply (low-rank)<br/>OpenMP Parallelism]
+
+    A --> B
+    B --> C
 ```
 
 ## Components
@@ -56,29 +44,18 @@ Dispatches to appropriate multiplication routine:
 
 ## Data Flow
 
-```
-Input Matrices (A, B)
-        │
-        ▼
-   ┌─────────┐
-   │  Block  │  Divide into blocks of size blockSize × blockSize
-   │ Partition│
-   └─────────┘
-        │
-        ▼
-   ┌──────────────────┐
-   │  Classify Block  │  For each block: compute SVD, determine type
-   │    (A, B)        │
-   └──────────────────┘
-        │
-        ▼
-   ┌──────────────────┐
-   │   Block Multiply │  Parallel execution with OpenMP
-   │    C = A × B     │  Dispatch based on block types
-   └──────────────────┘
-        │
-        ▼
-   Output Matrix (C)
+```mermaid
+flowchart TD
+    A[Input Matrices (A, B)]
+    B[Block Partition<br/>Divide into blocks of size blockSize × blockSize]
+    C[Classify Block (A, B)<br/>For each block: compute SVD, determine type]
+    D[Block Multiply<br/>Parallel execution with OpenMP<br/>C = A × B<br/>Dispatch based on block types]
+    E[Output Matrix (C)]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
 ```
 
 ## Key Design Decisions
