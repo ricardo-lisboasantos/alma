@@ -2,7 +2,7 @@
 
 ## Overview
 
-ALMA (Adaptive Linear Matrix Algebra) provides BLAS-accelerated linear algebra operations through both a command-line interface and a C++ API. The library automatically detects and uses the best available BLAS backend (Intel MKL, OpenBLAS, or Apple Accelerate).
+ALMA (Adaptive Linear Matrix Algebra) provides BLAS-accelerated linear algebra operations through both a command-line interface and a C++ API. The library automatically detects and uses the best available BLAS backend (Intel MKL, OpenBLAS, Apple Accelerate, or BLIS).
 
 ## System Components
 
@@ -32,7 +32,7 @@ ALMA (Adaptive Linear Matrix Algebra) provides BLAS-accelerated linear algebra o
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              BLAS Library (OpenBLAS/MKL/Accelerate)         │
+│              BLAS Library (OpenBLAS/MKL/Accelerate/BLIS)    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,9 +45,13 @@ src/
 │   └── alma_cache.h      # Cache/NUMA utilities
 ├── core/                  # Core implementation
 │   ├── alma.cpp         # All linear algebra functions
+│   ├── lapacke_android.cpp  # Android LAPACKE implementation
 │   └── platform/        # Platform-specific code
 │       ├── alma_linux.cpp
-│       └── alma_macos.cpp
+│       ├── alma_macos.cpp
+│       ├── alma_android.cpp
+│       ├── alma_windows.cpp
+│       └── alma_ios.cpp
 ├── io/                   # I/O utilities
 │   └── csv_utils.h      # CSV parsing
 └── cli/                  # Command-line interface

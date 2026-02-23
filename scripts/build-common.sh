@@ -273,6 +273,7 @@ setup_android_build() {
     meson setup "$build_dir" \
         --cross-file="$build_dir/cross-file.txt" \
         -Dbuildtype="$build_type" \
+        -Dstatic-link=true \
         -Dprefix="$(pwd)"
     
     if [ $? -ne 0 ]; then
@@ -359,6 +360,8 @@ build_blis_for_android() {
         --enable-static \
         --enable-blas \
         --enable-cblas \
+        --enable-lapack \
+        --enable-lapacke \
         --disable-threading \
         --disable-system \
         arm64
@@ -383,7 +386,76 @@ Libs: -L\${libdir} -lblis
 Cflags: -I\${includedir}
 EOF
 
-    echo "BLIS installed to $install_dir"
+    echo "BLIS with LAPACKE installed to $install_dir"
+}
+
+build_lapack_for_android() {
+    local ndk_path="${ANDROID_NDK_ROOT:-$ANDROID_NDK_HOME}"
+    local install_dir="$(pwd)/vendor/lapack/android-arm64"
+    local blis_dir="$(pwd)/vendor/blis/android-arm64"
+    
+    if [ -d "$install_dir/lib" ] && [ -f "$install_dir/lib/liblapack.a" ]; then
+        echo "LAPACK already built at $install_dir"
+        return 0
+    fi
+    
+    echo "Building LAPACK for Android arm64..."
+    
+    local lapack_src="/tmp/lapack-src"
+    if [ ! -d "$lapack_src/.git" ]; then
+        echo "Cloning LAPACK..."
+        rm -rf "$lapack_src"
+        git clone --depth 1 https://github.com/Reference-LAPACK/lapack.git "$lapack_src"
+    fi
+    
+    cd "$lapack_src"
+    
+    local toolchain="$ndk_path/toolchains/llvm/prebuilt/linux-x86_64"
+    local cc="$toolchain/bin/aarch64-linux-android21-clang"
+    local ar="$toolchain/bin/llvm-ar"
+    local ranlib="$toolchain/bin/llvm-ranlib"
+    
+    cp ../lapack.pc.in ../lapack.pc
+    
+    cat > make.inc << EOF
+SHELL = /bin/sh
+CC = $cc
+AR = $ar
+ARFLAGS = r
+RANLIB = $ranlib
+BLASLIB = $blis_dir/lib/libblis.a
+LAPACKLIB = liblapack.a
+TMGLIB = libtmglib.a
+LAPACKELIB = liblapacke.a
+CBLASLIB = libcblas.a
+
+CFLAGS = -O3 -fPIC -march=armv8.2-a+dotprod -DANDROID -D__ANDROID__
+NOOPT = -O3 -fPIC -march=armv8.2-a+dotprod -DANDROID -D__ANDROID__
+PIC = -fPIC
+
+BUILD = $cc
+LOADER = $cc
+
+MAKE = make
+EOF
+    
+    mkdir -p lib
+    $ar cr lib/liblapack.a lapack_lite/src/*.o
+    $ar cr lib/liblapacke.a SRC/lapacke/*.o
+    $ranlib lib/liblapack.a
+    $ranlib lib/liblapacke.a
+    
+    mkdir -p "$install_dir/lib"
+    cp lib/liblapack.a "$install_dir/lib/"
+    cp lib/liblapacke.a "$install_dir/lib/"
+    
+    mkdir -p "$install_dir/include"
+    cp -r SRC/lapacke.h "$install_dir/include/" 2>/dev/null || true
+    cp -r INCLUDE/*.h "$install_dir/include/" 2>/dev/null || true
+    
+    cd -
+    
+    echo "LAPACK installed to $install_dir"
 }
 
 check_windows_deps() {

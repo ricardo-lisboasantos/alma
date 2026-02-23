@@ -31,7 +31,7 @@ use_mkl = false
 use_accelerate = false
 backend_name = 'openblas'
 
-if system == 'android'
+  if system == 'android'
   message('Android build - checking for BLIS...')
   
   blis_path = meson.current_source_dir() + '/vendor/blis/android-arm64'
@@ -45,10 +45,13 @@ if system == 'android'
     if blis_lib.found()
       message('Using BLIS (static)')
       blas_dep = [blas_dep, blis_lib]
-      blas_cflags = ['-I' + blis_path + '/include']
+      blas_cflags = ['-I' + blis_path + '/include', '-I' + meson.current_source_dir() + '/src/core']
       backend_name = 'blis'
     endif
   endif
+  
+  lapacke_sources = ['src/core/lapacke_android.cpp']
+  lapacke_cflags = ['-I' + meson.current_source_dir() + '/src/core']
   
   if backend_name != 'blis'
     message('BLIS not found. Building for Android requires pre-built BLIS.')
@@ -231,12 +234,17 @@ build_type = get_option('buildtype')
 dist_dir = 'dist/' + build_type
 
 platform_sources = []
+lapacke_sources = []
+lapacke_cflags = []
+
 if system == 'linux'
   platform_sources = ['src/core/platform/alma_linux.cpp']
 elif system == 'windows'
   platform_sources = ['src/core/platform/alma_windows.cpp']
 elif system == 'android'
   platform_sources = ['src/core/platform/alma_android.cpp']
+  lapacke_sources = ['src/core/lapacke_android.cpp']
+  lapacke_cflags = ['-I' + meson.current_source_dir() + '/src/core']
 elif system == 'darwin'
   if is_ios
     platform_sources = ['src/core/platform/alma_ios.cpp']
@@ -249,18 +257,20 @@ elif cpu_family == 'arm' and system == 'linux'
   platform_sources = ['src/core/platform/alma_android.cpp']
 endif
 
-static_lib = static_library('alma', ['src/core/alma.cpp'] + platform_sources,
+static_lib = static_library('alma', ['src/core/alma.cpp'] + platform_sources + lapacke_sources,
   include_directories: ['src', 'src/include'],
   dependencies: [openmp, lapacke] + blas_dep,
-  cpp_args: blas_cflags,
+  cpp_args: blas_cflags + lapacke_cflags,
+  c_args: lapacke_cflags,
   link_args: blas_libs,
   install: false
 )
 
-libalma_dylib = shared_library('alma', ['src/core/alma.cpp'] + platform_sources,
+libalma_dylib = shared_library('alma', ['src/core/alma.cpp'] + platform_sources + lapacke_sources,
   include_directories: ['src', 'src/include'],
   dependencies: [openmp, lapacke] + blas_dep,
-  cpp_args: blas_cflags,
+  cpp_args: blas_cflags + lapacke_cflags,
+  c_args: lapacke_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/lib'
@@ -270,7 +280,7 @@ alma_exec = executable('alma', 'src/cli/main.cpp',
   include_directories: ['src', 'src/include'],
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
-  cpp_args: blas_cflags,
+  cpp_args: blas_cflags + lapacke_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/exec'
@@ -280,7 +290,7 @@ benchmark_exec = executable('alma-benchmark', 'bench/benchmark.cpp',
   include_directories: ['src', 'src/include'],
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
-  cpp_args: blas_cflags,
+  cpp_args: blas_cflags + lapacke_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/exec'
@@ -290,7 +300,7 @@ quickbench_exec = executable('quick_bench', 'bench/quick_bench.cpp',
   include_directories: ['src', 'src/include'],
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
-  cpp_args: blas_cflags,
+  cpp_args: blas_cflags + lapacke_cflags,
   link_args: blas_libs,
   install: true,
   install_dir: dist_dir + '/exec'
@@ -313,7 +323,7 @@ test_sources = [
 test('alma', executable('test_alma', test_sources,
   link_with: static_lib,
   dependencies: [openmp, lapacke] + blas_dep,
-  cpp_args: blas_cflags,
+  cpp_args: blas_cflags + lapacke_cflags,
   link_args: blas_libs,
   include_directories: ['src', 'src/include']
 ), protocol: 'tap')

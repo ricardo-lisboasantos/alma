@@ -97,6 +97,35 @@ ninja -C build
 
 Note: Requires static OpenBLAS libraries installed on the system.
 
+### Cross-Platform Builds
+
+#### Android (arm64-v8a)
+
+Requires Android NDK. Set `ANDROID_NDK_ROOT` environment variable:
+
+```bash
+export ANDROID_NDK_ROOT=/path/to/android-ndk
+make android
+```
+
+The Android build uses BLIS as the BLAS backend with a custom LAPACKE implementation for LAPACK operations. All dependencies are statically linked.
+
+#### iOS
+
+Requires Xcode. Build with:
+
+```bash
+make ios
+```
+
+#### Windows (MinGW)
+
+Requires MinGW-w64. Build with:
+
+```bash
+make windows
+```
+
 ### Test Suite
 
 ```bash
@@ -133,3 +162,4 @@ ALMA automatically detects and uses the best available BLAS backend:
 - **Intel MKL** (highest performance on x86)
 - **OpenBLAS** (default on Linux)
 - **Apple Accelerate** (macOS)
+- **BLIS** (Android arm64, optimized for ARM)

@@ -1,4 +1,4 @@
-.PHONY: all debug release test clean install deps check help setup android build-blis-android
+.PHONY: all debug release test clean install deps check help setup android build-blis-android build-lapack-android
 
 SCRIPT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 COMMON_SCRIPT := $(SCRIPT_DIR)/scripts/build-common.sh
@@ -67,8 +67,14 @@ build-blis-android:
 	@bash -c 'source $(COMMON_SCRIPT); check_android_deps' || (echo "Please set up Android NDK first" && exit 1)
 	@bash -c 'source $(COMMON_SCRIPT); build_blis_for_android'
 
+build-lapack-android:
+	@bash -c 'source $(COMMON_SCRIPT); check_android_deps' || (echo "Please set up Android NDK first" && exit 1)
+	@bash -c 'source $(COMMON_SCRIPT); build_lapack_for_android'
+
 android:
 	@bash -c 'source $(COMMON_SCRIPT); check_android_deps' || (echo "Please set up Android NDK first" && exit 1)
+	@bash -c 'source $(COMMON_SCRIPT); build_blis_for_android'
+	@bash -c 'source $(COMMON_SCRIPT); build_lapack_for_android'
 	@bash -c 'source $(COMMON_SCRIPT); setup_android_build release'
 	@bash -c 'source $(COMMON_SCRIPT); compile_android release'
 	@bash -c 'source $(COMMON_SCRIPT); install_android release'
@@ -89,28 +95,29 @@ help:
 	@echo "Alma build system - Cross-platform Makefile"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all      - Build release version (default)"
-	@echo "  debug    - Build debug version"
-	@echo "  release  - Build release version"
-	@echo "  test     - Run tests"
-	@echo "  clean    - Clean build artifacts"
-	@echo "  install  - Install built artifacts"
-	@echo "  deps     - Install system dependencies"
-	@echo "  check    - Check for missing dependencies"
-	@echo "  help     - Show this help message"
+	@echo "  all       - Build release version (default)"
+	@echo "  debug     - Build debug version"
+	@echo "  release   - Build release version"
+	@echo "  test      - Run tests"
+	@echo "  clean     - Clean build artifacts"
+	@echo "  install   - Install built artifacts"
+	@echo "  deps      - Install system dependencies"
+	@echo "  check     - Check for missing dependencies"
+	@echo "  help      - Show this help message"
 	@echo ""
 	@echo "Cross-compile targets:"
-	@echo "  build-blis-android - Build BLIS for Android arm64"
-	@echo "  android            - Build for Android (requires NDK)"
-	@echo "  ios                - Build for iOS (requires Xcode)"
-	@echo "  windows            - Build for Windows (requires MinGW)"
+	@echo "  build-blis-android   - Build BLIS for Android arm64"
+	@echo "  build-lapack-android - Build LAPACK for Android arm64"
+	@echo "  android              - Build for Android arm64 (requires NDK)"
+	@echo "  ios                  - Build for iOS (requires Xcode)"
+	@echo "  windows              - Build for Windows (requires MinGW)"
 	@echo ""
 	@echo "Setup targets (install toolchains):"
-	@echo "  make setup-linux   - Set up Linux build dependencies"
-	@echo "  make setup-macos  - Set up macOS build dependencies"
-	@echo "  make setup-android - Set up Android NDK toolchain"
-	@echo "  make setup-ios     - Set up iOS toolchain"
-	@echo "  make setup-windows - Set up Windows cross-compile toolchain"
+	@echo "  make setup-linux    - Set up Linux build dependencies"
+	@echo "  make setup-macos    - Set up macOS build dependencies"
+	@echo "  make setup-android  - Set up Android NDK toolchain"
+	@echo "  make setup-ios      - Set up iOS toolchain"
+	@echo "  make setup-windows  - Set up Windows cross-compile toolchain"
 	@echo ""
 	@echo "Detected OS: $(OS)"
 	@echo "Package manager: $(PKG_MGR)"

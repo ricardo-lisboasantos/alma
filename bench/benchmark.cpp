@@ -3,7 +3,11 @@
 #include <chrono>
 #include <cmath>
 #include <cblas.h>
+#if defined(__ANDROID__)
+#include <lapacke_android.h>
+#else
 #include <lapacke.h>
+#endif
 #include <random>
 #include <iomanip>
 #include <sstream>
@@ -69,7 +73,7 @@ static SystemInfo detect_system_info() {
 #elif defined(__linux__)
     std::ifstream cpuinfo("/proc/cpuinfo");
     std::string line;
-    int physical = 0, cores = 0;
+    [[maybe_unused]] int physical = 0, cores = 0;
     while (std::getline(cpuinfo, line)) {
         if (line.find("physical id") != std::string::npos) {
             physical = std::stoi(line.substr(line.find(':') + 1));
