@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant User
+    participant alma_multiply
+    participant alma_multiply_full
+    participant compute_block_meta
+    participant LAPACK
+    participant multiply_lowrank_block
+    participant BLAS
+
+    User->>alma_multiply: alma_multiply(A, B, C, n, blockSize)
+    alma_multiply->>alma_multiply_full: alma_multiply_full(A, B, C, n, blockSize)
+
+    alma_multiply_full->>alma_multiply_full: Validate params
+    alma_multiply_full->>alma_multiply_full: n <= 256?
+
+    alt Small matrix
+        alma_multiply_full->>BLAS: cblas_dgemm(A, B, C)
+    else Blocked multiply
+        alma_multiply_full->>compute_block_meta: For each block in A
+        compute_block_meta->>LAPACK: LAPACKE_dgesvd
+        LAPACK-->>compute_block_meta: U, S, VT
+        compute_block_meta-->>alma_multiply_full: BlockMeta
+
+        alma_multiply_full->>compute_block_meta: For each block in B
+        compute_block_meta->>LAPACK: LAPACKE_dgesvd
+        LAPACK-->>compute_block_meta: U, S, VT
+
+        alma_multiply_full->>alma_multiply_full: Parallel for (bi, bj)
+        loop For each bk
+            alt Both LowRank
+                alma_multiply_full->>multiply_lowrank_block: U_a*S_a*V_a^T × U_b*S_b*V_b^T
+                multiply_lowrank_block-->>alma_multiply_full: C_block
+            else Any Dense
+                alma_multiply_full->>BLAS: cblas_dgemm(block)
+                BLAS-->>alma_multiply_full: C_block
+            end
+        end
+    end
+
+    alma_multiply_full-->>User: AlmaError::Success

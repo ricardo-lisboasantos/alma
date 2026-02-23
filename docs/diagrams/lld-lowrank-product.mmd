@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph Input["Input: A=UsV^T, B=UbSbVb^T"]
+        A1[U_a, S_a, V_a^T]
+        B1[U_b, S_b, V_b^T]
+    end
+
+    subgraph Step1["1. M = V_a^T × U_b"]
+        S1[V_a^T × U_b<br/>ra × rb matrix]
+    end
+
+    subgraph Step2["2. Scale by singular values"]
+        S2[M[i,j] *= S_a[i]×S_b[j]]
+    end
+
+    subgraph Step3["3. T = M × V_b^T"]
+        S3[M × V_b^T<br/>ra × n matrix]
+    end
+
+    subgraph Step4["4. C = U_a × T"]
+        S4[U_a × T<br/>m × n result]
+    end
+
+    A1 --> S1
+    B1 --> S1
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4

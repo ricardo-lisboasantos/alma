@@ -1,0 +1,22 @@
+classDiagram
+    class BlockMeta {
+        +BlockType type
+        +int rows
+        +int cols
+        +int rank_est
+        +int ld
+    }
+
+    class MatrixBlock {
+        +double* data
+        +BlockMeta meta
+    }
+
+    class BlockType {
+        <<enumeration>>
+        LowRank
+        Dense
+    }
+
+    MatrixBlock --> BlockMeta
+    BlockMeta --> BlockType

@@ -1,0 +1,24 @@
+classDiagram
+    class BlockMeta {
+        +BlockType type
+        +int rows
+        +int cols
+        +int rank
+        +int ld
+        +double* U
+        +double* S
+        +double* VT
+    }
+
+    class MatrixBlock {
+        +double* data
+        +BlockMeta meta
+    }
+
+    class TunedConfig {
+        +int blockSize
+        +bool useOpenBLAS
+        +bool initialized
+    }
+
+    MatrixBlock --> BlockMeta

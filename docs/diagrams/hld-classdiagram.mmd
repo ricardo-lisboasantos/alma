@@ -1,0 +1,40 @@
+classDiagram
+    class AlmaError {
+        <<enumeration>>
+        Success = 0
+        NullPointer
+        InvalidDimension
+        InvalidBlockSize
+        DimensionMismatch
+    }
+
+    class BlockType {
+        <<enumeration>>
+        LowRank
+        Dense
+    }
+
+    class BlockMeta {
+        +BlockType type
+        +int rows
+        +int cols
+        +int rank
+        +int ld
+        +double* U
+        +double* S
+        +double* VT
+    }
+
+    class MatrixBlock {
+        +double* data
+        +BlockMeta meta
+    }
+
+    class TunedConfig {
+        +int blockSize
+        +bool useOpenBLAS
+        +bool initialized
+    }
+
+    MatrixBlock --> BlockMeta : contains
+    BlockMeta --> BlockType : uses

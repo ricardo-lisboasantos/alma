@@ -1,4 +1,3 @@
-```mermaid
 flowchart TD
     A[Start: alma_multiply] --> B{n <= 256?}
     B -->|Yes| C[Single BLAS dgemm]
@@ -11,57 +10,3 @@ flowchart TD
     I --> J[Free metadata]
     J --> K[End]
     C --> K
-```
-
-```mermaid
-classDiagram
-    class BlockMeta {
-        +BlockType type
-        +int rows
-        +int cols
-        +int rank_est
-        +int ld
-    }
-
-    class MatrixBlock {
-        +double* data
-        +BlockMeta meta
-    }
-
-    class BlockType {
-        <<enumeration>>
-        LowRank
-        Dense
-    }
-
-    MatrixBlock --> BlockMeta
-    BlockMeta --> BlockType
-```
-
-```mermaid
-sequenceDiagram
-    participant Main
-    participant Alma
-    participant BLAS
-    participant OpenMP
-
-    Main->>Alma: alma_multiply(A, B, C, n, blockSize)
-    
-    alt n <= 256
-        Alma->>BLAS: cblas_dgemm
-        BLAS-->>Alma: result
-    else n > 256
-        Alma->>Alma: classify_all_blocks(A)
-        Alma->>Alma: classify_all_blocks(B)
-        Alma->>OpenMP: parallel for initialization
-        OpenMP-->>Alma: C initialized
-        Alma->>OpenMP: parallel for block multiply
-        loop For each block
-            OpenMP->>BLAS: cblas_dgemm(block)
-            BLAS-->>OpenMP: partial result
-        end
-        OpenMP-->>Alma: C complete
-    end
-    
-    Alma-->>Main: done
-```

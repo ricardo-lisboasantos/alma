@@ -1,0 +1,16 @@
+flowchart TD
+    subgraph Configuration["Auto-Tuning"]
+        T1[tune_configuration] --> T2[Test sizes<br/>512, 1024]
+        T2 --> T3[Test blocks<br/>64, 128, 256]
+        T3 --> T4[Benchmark<br/>OpenBLAS baseline]
+        T4 --> T5[Compare ALMA<br/>vs OpenBLAS]
+        T5 --> T6{Best ALMA?}
+        T6 -->|Yes| T7[Use tuned blockSize]
+        T6 -->|No| T8[Fallback to OpenBLAS]
+    end
+
+    subgraph Cache["Cache-Based Sizing"]
+        C1[get_l3_cache_size] --> C2[Platform-specific<br/>sysctl / sysfs]
+        C2 --> C3[sqrt(cache /<br/>2*sizeof(double))]
+        C3 --> C4[Optimal blockSize]
+    end

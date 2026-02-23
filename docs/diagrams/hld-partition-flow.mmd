@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph Input["Input Matrices A, B"]
+        I1[Matrix A<br/>n×n]
+        I2[Matrix B<br/>n×n]
+    end
+
+    subgraph Partition["Block Partition"]
+        P1[Divide into<br/>blocks]
+    end
+
+    subgraph Classify["Classification"]
+        CL1[For each block<br/>Compute SVD]
+        CL2[Determine<br/>BlockType]
+    end
+
+    subgraph Multiply["Block Multiplication"]
+        M1[Parallel<br/>OpenMP]
+        M2[Dispatch<br/>by Type]
+        M3[dgemm or<br/>LowRank Multiply]
+    end
+
+    subgraph Output["Output Matrix C"]
+        O1[Matrix C<br/>n×n]
+    end
+
+    I1 --> P1
+    I2 --> P1
+    P1 --> CL1
+    CL1 --> CL2
+    CL2 --> M1
+    M1 --> M2
+    M2 --> M3
+    M3 --> O1

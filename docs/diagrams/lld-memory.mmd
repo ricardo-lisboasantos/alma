@@ -1,0 +1,6 @@
+flowchart TD
+    subgraph Memory["Memory Layout"]
+        ML1[Row-major: A[i][j] = A[i*ld + j]]
+        ML2[Block data: &A[bi*blockSize*n + bj*blockSize]]
+        ML3[Leading dimension (ld) for submatrix operations]
+    end
